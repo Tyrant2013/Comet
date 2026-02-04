@@ -22,11 +22,6 @@ let package = Package(
         .target(
             name: "Comet", dependencies: ["Camera"]),
         .target(
-            name: "Camera"),
-        
-        .testTarget(
-            name: "CometTests",
-            dependencies: ["Comet"]
-        ),
+            name: "Camera", path: "Sources/Camera"),
     ]
 )

@@ -11,13 +11,13 @@ import MetalKit
 import AVFoundation
 import SwiftUI
 
-class CMCameraView: UIView {
+public class CMCameraView: UIView {
     let camera: CMCamera
     private let metalPreview: MTKView = .init(frame: .zero, device: CMMetalDevice.shared.device)
     private var currentTexture: MTLTexture?
     private var vertexBuffer: MTLBuffer?
     
-    init(camera: CMCamera) {
+    public init(camera: CMCamera) {
         self.camera = camera
         super.init(frame: .zero)
         
@@ -48,7 +48,7 @@ class CMCameraView: UIView {
         vertexBuffer = CMMetalDevice.shared.device.makeBuffer(bytes: vertexs, length: vertexs.count * MemoryLayout<Float>.size, options: .storageModeShared)
     }
     
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
         
         metalPreview.frame = bounds
@@ -71,11 +71,11 @@ extension CMCameraView: MTKViewDelegate {
         currentTexture = CVMetalTextureGetTexture(metalTexture)
     }
     
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         
     }
     
-    func draw(in view: MTKView) {
+    public func draw(in view: MTKView) {
         guard let texture = currentTexture else { return }
         
         guard let drawable = view.currentDrawable,
@@ -105,14 +105,18 @@ extension CMCameraView: MTKViewDelegate {
     }
 }
 
-struct CMCameraView_SwifUI: UIViewRepresentable {
+public struct CMCameraView_SwifUI: UIViewRepresentable {
     let camera: CMCamera
-    func makeUIView(context: Context) -> CMCameraView {
+    public init(camera: CMCamera) {
+        self.camera = camera
+    }
+    
+    public func makeUIView(context: Context) -> CMCameraView {
         let view = CMCameraView(camera: camera)
         return view
     }
     
-    func updateUIView(_ uiView: CMCameraView, context: Context) {
+    public func updateUIView(_ uiView: CMCameraView, context: Context) {
         
     }
 }

@@ -18,7 +18,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     
     @Published var photoCaptureSettings: CMPhotoCaptureSettings = .default
     
-    override init() {
+    public override init() {
         super.init()
         do {
             try setupSession()

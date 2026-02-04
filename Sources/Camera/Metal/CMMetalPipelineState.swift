@@ -14,7 +14,7 @@ class CMMetalPipelineState: @unchecked Sendable {
     private(set) var pipelineState: MTLRenderPipelineState?
     
     init(device: MTLDevice) {
-        let library = device.makeDefaultLibrary()
+        let library = try? device.makeDefaultLibrary(bundle: Bundle.module)
         let vertexFunc = library?.makeFunction(name: "vertexFunc")
         let fragmentFunc = library?.makeFunction(name: "fragmentFunc")
         let pipelineDesc = MTLRenderPipelineDescriptor()
