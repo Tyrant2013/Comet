@@ -23,5 +23,6 @@ let package = Package(
             name: "Comet", dependencies: ["Camera"]),
         .target(
             name: "Camera", path: "Sources/Camera"),
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

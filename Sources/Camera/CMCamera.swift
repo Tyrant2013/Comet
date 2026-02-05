@@ -33,19 +33,19 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         }
     }
     /// 启动Session
-    func start() {
+    public func start() {
         guard !session.isRunning else { return }
         cameraDataQueue.async { [weak self] in
             self?.session.startRunning()
         }
     }
     /// 停止Session
-    func stop() {
+    public func stop() {
         guard session.isRunning else { return }
         session.stopRunning()
     }
     
-    func setFocus(_ point: CGPoint) {
+    public func setFocus(_ point: CGPoint) {
         guard let inputDevice = device else { return }
         do {
             try inputDevice.lockForConfiguration()
@@ -71,7 +71,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         }
     }
     
-    func setZoomFactor(_ factor: CGFloat) {
+    public func setZoomFactor(_ factor: CGFloat) {
         guard let device else { return }
         do {
             try device.lockForConfiguration()
@@ -87,7 +87,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     }
     
     /// 拍照
-    func takePhoto() async -> CMPhoto? {
+    public func takePhoto() async -> CMPhoto? {
         guard let photoOutput = session.outputs.first(where: { $0 is AVCapturePhotoOutput }) as? AVCapturePhotoOutput else { return nil }
         
         let setting = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])

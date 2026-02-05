@@ -14,6 +14,9 @@ struct CometDemoApp: App {
     var body: some Scene {
         WindowGroup {
             CMCameraView_SwifUI(camera: camera)
+                .task {
+                    camera.start()
+                }
         }
     }
 }

@@ -71,17 +71,6 @@ public class CMCameraView: UIView {
 extension CMCameraView: MTKViewDelegate {
     
     func cameraDataUpdate(_ sampleBuffer: CMSampleBuffer) {
-//        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-//        guard let textureCache = CMMetalDevice.shared.metalTextureCache else { return }
-//        let width = CVPixelBufferGetWidth(imageBuffer)
-//        let height = CVPixelBufferGetHeight(imageBuffer)
-//        
-//        
-//        var metalTexture: CVMetalTexture?
-//        CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, imageBuffer, nil, .bgra8Unorm, width, height, 0, &metalTexture)
-//        
-//        guard let metalTexture else { return }
-//        currentTexture = CVMetalTextureGetTexture(metalTexture)
         
         currentTexture = sampleBuffer.covertToMTLTexture(textureCache: CMMetalDevice.shared.metalTextureCache)
     }
@@ -107,24 +96,6 @@ extension CMCameraView: MTKViewDelegate {
             pipelineState: pipelineState,
             renderPassDescriptor: desc
         )
-        
-//        let commandQueue = CMMetalDevice.shared.commandQueue
-//        
-//        
-//        guard let commandBuffer = commandQueue.makeCommandBuffer(),
-//              let commandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: desc)
-//        else { return }
-//        
-//        commandEncoder.setRenderPipelineState(pipelineState)
-//        
-//        commandEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-//        commandEncoder.setFragmentTexture(texture, index: 0)
-//        
-//        commandEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-//        commandEncoder.endEncoding()
-//        
-//        commandBuffer.present(drawable)
-//        commandBuffer.commit()
     }
 }
 
