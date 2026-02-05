@@ -67,7 +67,22 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             inputDevice.unlockForConfiguration()
         }
         catch {
+            print("Comet Camera: set focus failed:", error.localizedDescription)
+        }
+    }
+    
+    func setZoomFactor(_ factor: CGFloat) {
+        guard let device else { return }
+        do {
+            try device.lockForConfiguration()
+            let clampFactor = max(1.0, min(factor, device.activeFormat.videoMaxZoomFactor))
             
+            device.ramp(toVideoZoomFactor: clampFactor, withRate: 2.0)
+            
+            device.unlockForConfiguration()
+        }
+        catch {
+            print("Comet Camera: set zoom factor failed:", error.localizedDescription)
         }
     }
     
@@ -110,6 +125,13 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     }
     
     private func addInput() throws {
+        // 超广角: 0.5x
+        // AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back)
+        // 广角: 1.0x
+        // AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+        // 长焦: 2.0x 或 2.5x/3.0x (根据机型)
+        // AVCaptureDevice.default(.builtInTelephotoCamera, for: .video, position: .back)
+        
         guard let device = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back)
         else { throw CMCameraError.deviceUnavailable }
         do {
