@@ -17,6 +17,8 @@ public class CMCameraView: UIView {
     private var currentTexture: MTLTexture?
     private var vertexBuffer: MTLBuffer?
     
+    private var focusAnimatedView: CMCameraFocusAnimatedView = CMCameraFocusAnimatedView()
+    
     public init(camera: CMCamera) {
         self.camera = camera
         super.init(frame: .zero)
@@ -53,22 +55,35 @@ public class CMCameraView: UIView {
         
         metalPreview.frame = bounds
     }
+    
+    public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touchPoint = touches.first else { return }
+        let size = bounds.size
+        let point = touchPoint.location(in: self)
+        let focusPoint = CGPoint(x: point.y / size.height, y: 1 - point.x / size.width)
+        
+        focusAnimatedView.animateFocus(at: point)
+        
+        camera.setFocus(focusPoint)
+    }
 }
 
 extension CMCameraView: MTKViewDelegate {
     
     func cameraDataUpdate(_ sampleBuffer: CMSampleBuffer) {
-        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        guard let textureCache = CMMetalDevice.shared.metalTextureCache else { return }
-        let width = CVPixelBufferGetWidth(imageBuffer)
-        let height = CVPixelBufferGetHeight(imageBuffer)
+//        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+//        guard let textureCache = CMMetalDevice.shared.metalTextureCache else { return }
+//        let width = CVPixelBufferGetWidth(imageBuffer)
+//        let height = CVPixelBufferGetHeight(imageBuffer)
+//        
+//        
+//        var metalTexture: CVMetalTexture?
+//        CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, imageBuffer, nil, .bgra8Unorm, width, height, 0, &metalTexture)
+//        
+//        guard let metalTexture else { return }
+//        currentTexture = CVMetalTextureGetTexture(metalTexture)
         
-        
-        var metalTexture: CVMetalTexture?
-        CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, imageBuffer, nil, .bgra8Unorm, width, height, 0, &metalTexture)
-        
-        guard let metalTexture else { return }
-        currentTexture = CVMetalTextureGetTexture(metalTexture)
+        currentTexture = sampleBuffer.covertToMTLTexture(textureCache: CMMetalDevice.shared.metalTextureCache)
     }
     
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -85,23 +100,31 @@ extension CMCameraView: MTKViewDelegate {
         guard let pipelineState = CMMetalPipelineState.shared.pipelineState
         else { return }
         
-        let commandQueue = CMMetalDevice.shared.commandQueue
+        CMMetalDevice.shared.commandQueue.enqueueVertexBuffer(
+            vertexBuffer,
+            texture: texture,
+            drawable: drawable,
+            pipelineState: pipelineState,
+            renderPassDescriptor: desc
+        )
         
-        
-        guard let commandBuffer = commandQueue.makeCommandBuffer(),
-              let commandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: desc)
-        else { return }
-        
-        commandEncoder.setRenderPipelineState(pipelineState)
-        
-        commandEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        commandEncoder.setFragmentTexture(texture, index: 0)
-        
-        commandEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-        commandEncoder.endEncoding()
-        
-        commandBuffer.present(drawable)
-        commandBuffer.commit()
+//        let commandQueue = CMMetalDevice.shared.commandQueue
+//        
+//        
+//        guard let commandBuffer = commandQueue.makeCommandBuffer(),
+//              let commandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: desc)
+//        else { return }
+//        
+//        commandEncoder.setRenderPipelineState(pipelineState)
+//        
+//        commandEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+//        commandEncoder.setFragmentTexture(texture, index: 0)
+//        
+//        commandEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+//        commandEncoder.endEncoding()
+//        
+//        commandBuffer.present(drawable)
+//        commandBuffer.commit()
     }
 }
 

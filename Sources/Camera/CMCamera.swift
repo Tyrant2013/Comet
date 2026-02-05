@@ -45,6 +45,32 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         session.stopRunning()
     }
     
+    func setFocus(_ point: CGPoint) {
+        guard let inputDevice = device else { return }
+        do {
+            try inputDevice.lockForConfiguration()
+            
+            if inputDevice.isFocusPointOfInterestSupported {
+                inputDevice.focusPointOfInterest = point
+            }
+            if inputDevice.isFocusModeSupported(.autoFocus) {
+                inputDevice.focusMode = .autoFocus
+            }
+            
+            if inputDevice.isExposurePointOfInterestSupported {
+                inputDevice.exposurePointOfInterest = point
+            }
+            if inputDevice.isExposureModeSupported(.autoExpose) {
+                inputDevice.exposureMode = .autoExpose
+            }
+            
+            inputDevice.unlockForConfiguration()
+        }
+        catch {
+            
+        }
+    }
+    
     /// 拍照
     func takePhoto() async -> CMPhoto? {
         guard let photoOutput = session.outputs.first(where: { $0 is AVCapturePhotoOutput }) as? AVCapturePhotoOutput else { return nil }
@@ -76,6 +102,11 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         
         addOutput()
         
+    }
+    
+    private var device: AVCaptureDevice? {
+        guard let inputDevice = session.inputs.first as? AVCaptureDeviceInput else { return nil }
+        return inputDevice.device
     }
     
     private func addInput() throws {
