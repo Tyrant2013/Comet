@@ -46,6 +46,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     }
     
     public func setFocus(_ point: CGPoint) {
+        print("Comet Camera: set focus at:", point)
         guard let inputDevice = device else { return }
         do {
             try inputDevice.lockForConfiguration()
@@ -72,6 +73,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     }
     
     public func setZoomFactor(_ factor: CGFloat) {
+        print("Comet Camera: set zoom factor at:", factor)
         guard let device else { return }
         do {
             try device.lockForConfiguration()

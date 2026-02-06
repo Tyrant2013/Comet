@@ -41,6 +41,8 @@ public class CMCameraView: UIView {
         metalPreview.delegate = self
         addSubview(metalPreview)
         
+        addSubview(focusAnimatedView)
+        
         let vertexs: [Float] = [
             -1, -1, 0, 1, 1, 0,
             -1,  1, 0, 1, 0, 0,
