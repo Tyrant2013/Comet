@@ -43,6 +43,8 @@ public class CMCameraView: UIView {
         
         addSubview(focusAnimatedView)
         
+        addGestures()
+        
         let vertexs: [Float] = [
             -1, -1, 0, 1, 1, 0,
             -1,  1, 0, 1, 0, 0,
@@ -58,15 +60,54 @@ public class CMCameraView: UIView {
         metalPreview.frame = bounds
     }
     
-    public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touchPoint = touches.first else { return }
+    private func addGestures() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tagForFocus(_:)))
+        addGestureRecognizer(tap)
+        
+        let pin = UIPinchGestureRecognizer(target: self, action: #selector(pinchForZoom(_:)))
+        addGestureRecognizer(pin)
+    }
+    @objc
+    private func tagForFocus(_ sender: UITapGestureRecognizer) {
         let size = bounds.size
-        let point = touchPoint.location(in: self)
+        let point = sender.location(in: self)
         let focusPoint = CGPoint(x: point.y / size.height, y: 1 - point.x / size.width)
         
         focusAnimatedView.animateFocus(at: point)
         
         camera.setFocus(focusPoint)
+    }
+    
+    private var beginZoomFactor: CGFloat = 1
+    private var desiredZoomFactor: CGFloat = 1
+    private var currentZoomFactor: CGFloat = 1
+    private var isPinching: Bool = false
+    @objc
+    private func pinchForZoom(_ sender: UIPinchGestureRecognizer) {
+        switch sender.state {
+        case .began:
+            isPinching = true
+            
+        case .changed:
+            // 计算新的缩放值
+            var desiredZoomFactor = beginZoomFactor * sender.scale
+            
+            // 限制缩放范围
+            let minZoom: CGFloat = 1.0
+            let maxZoom = 5.0
+            desiredZoomFactor = min(max(desiredZoomFactor, minZoom), maxZoom)
+            
+        case .ended, .cancelled, .failed:
+            isPinching = false
+            beginZoomFactor = currentZoomFactor
+            
+            // 重置手势 scale，避免下次累积
+            sender.scale = 1.0
+            
+        default:
+            break
+        }
+        camera.setZoomFactor(desiredZoomFactor)
     }
 }
 
