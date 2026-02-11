@@ -9,10 +9,18 @@ import Foundation
 import AVFoundation
 
 public struct CMPhotoCaptureSettings: Sendable {
-    var flashMode: AVCaptureDevice.FlashMode = .auto
-    var torchMode: AVCaptureDevice.TorchMode = .auto
+    public var flashMode: AVCaptureDevice.FlashMode
+    public var torchMode: AVCaptureDevice.TorchMode
+    
+    public init(
+        flashMode: AVCaptureDevice.FlashMode = .auto,
+        torchMode: AVCaptureDevice.TorchMode = .auto
+    ) {
+        self.flashMode = flashMode
+        self.torchMode = torchMode
+    }
 }
 
-extension CMPhotoCaptureSettings {
+public extension CMPhotoCaptureSettings {
     static let `default` = CMPhotoCaptureSettings()
 }

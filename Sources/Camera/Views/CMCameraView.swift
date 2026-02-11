@@ -14,13 +14,13 @@ import SwiftUI
 public class CMCameraView: UIView {
     let camera: CMCamera
     private let metalPreview: MTKView = .init(frame: .zero, device: CMMetalDevice.shared.device)
-    private var currentTexture: MTLTexture?
-    private var vertexBuffer: MTLBuffer?
+    private let renderer: CMMetalRenderer
     
     private var focusAnimatedView: CMCameraFocusAnimatedView = CMCameraFocusAnimatedView()
     
     public init(camera: CMCamera) {
         self.camera = camera
+        self.renderer = CMMetalRenderer(device: CMMetalDevice.shared.device)
         super.init(frame: .zero)
         
         camera.cameraFrameDataHandler = cameraDataUpdate
@@ -30,6 +30,7 @@ public class CMCameraView: UIView {
     
     required init?(coder: NSCoder) {
         camera = CMCamera()
+        renderer = CMMetalRenderer(device: CMMetalDevice.shared.device)
         
         super.init(coder: coder)
         
@@ -44,14 +45,6 @@ public class CMCameraView: UIView {
         addSubview(focusAnimatedView)
         
         addGestures()
-        
-        let vertexs: [Float] = [
-            -1, -1, 0, 1, 1, 0,
-            -1,  1, 0, 1, 0, 0,
-             1, -1, 0, 1, 1, 1,
-             1,  1, 0, 1, 0, 1
-        ]
-        vertexBuffer = CMMetalDevice.shared.device.makeBuffer(bytes: vertexs, length: vertexs.count * MemoryLayout<Float>.size, options: .storageModeShared)
     }
     
     public override func layoutSubviews() {
@@ -90,12 +83,13 @@ public class CMCameraView: UIView {
             
         case .changed:
             // 计算新的缩放值
-            var desiredZoomFactor = beginZoomFactor * sender.scale
+            desiredZoomFactor = beginZoomFactor * sender.scale
             
             // 限制缩放范围
             let minZoom: CGFloat = 1.0
             let maxZoom = 5.0
             desiredZoomFactor = min(max(desiredZoomFactor, minZoom), maxZoom)
+            currentZoomFactor = desiredZoomFactor
             
         case .ended, .cancelled, .failed:
             isPinching = false
@@ -114,8 +108,7 @@ public class CMCameraView: UIView {
 extension CMCameraView: MTKViewDelegate {
     
     func cameraDataUpdate(_ sampleBuffer: CMSampleBuffer) {
-        
-        currentTexture = sampleBuffer.covertToMTLTexture(textureCache: CMMetalDevice.shared.metalTextureCache)
+        renderer.update(sampleBuffer: sampleBuffer, textureCache: CMMetalDevice.shared.metalTextureCache)
     }
     
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -123,21 +116,13 @@ extension CMCameraView: MTKViewDelegate {
     }
     
     public func draw(in view: MTKView) {
-        guard let texture = currentTexture else { return }
-        
-        guard let drawable = view.currentDrawable,
-              let desc = view.currentRenderPassDescriptor
-        else { return }
-        
         guard let pipelineState = CMMetalPipelineState.shared.pipelineState
         else { return }
         
-        CMMetalDevice.shared.commandQueue.enqueueVertexBuffer(
-            vertexBuffer,
-            texture: texture,
-            drawable: drawable,
+        renderer.draw(
+            in: view,
             pipelineState: pipelineState,
-            renderPassDescriptor: desc
+            commandQueue: CMMetalDevice.shared.commandQueue
         )
     }
 }

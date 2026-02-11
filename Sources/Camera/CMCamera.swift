@@ -16,7 +16,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     
     var cameraFrameDataHandler: ((CMSampleBuffer) -> Void)?
     
-    @Published var photoCaptureSettings: CMPhotoCaptureSettings = .default
+    @Published public var photoCaptureSettings: CMPhotoCaptureSettings = .default
     
     public override init() {
         super.init()
@@ -118,6 +118,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         try addInput()
         
         addOutput()
+        addPhotoCaptureOutput()
         
     }
     

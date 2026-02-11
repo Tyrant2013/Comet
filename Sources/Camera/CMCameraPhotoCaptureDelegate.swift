@@ -21,11 +21,15 @@ class CMCameraPhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     }
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: (any Error)?) {
-        if error != nil {
+        if let error {
             completionHandler(id, nil, error)
+            return
         }
         
-        guard let pixelBuffer = photo.pixelBuffer else { return }
+        guard let pixelBuffer = photo.pixelBuffer else {
+            completionHandler(id, nil, nil)
+            return
+        }
         completionHandler(id, pixelBuffer, nil)
     }
 }

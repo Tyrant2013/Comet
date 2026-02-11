@@ -9,5 +9,9 @@ import Foundation
 import AVFoundation
 
 public struct CMPhoto: @unchecked Sendable {
-    let pixelBuffer: CVPixelBuffer
+    public let pixelBuffer: CVPixelBuffer
+    
+    public init(pixelBuffer: CVPixelBuffer) {
+        self.pixelBuffer = pixelBuffer
+    }
 }
