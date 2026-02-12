@@ -86,24 +86,33 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         }
     }
     
-    public func setZoomFactor(_ factor: CGFloat) {
+    public func setZoomFactor(_ factor: CGFloat, rampDuration: TimeInterval = 0.12) {
         print("Comet Camera: set zoom factor at:", factor)
-        guard let device = currentDevice() else { return }
-        do {
-            try device.lockForConfiguration()
-            let minZoom = device.minAvailableVideoZoomFactor
-            let maxZoom = effectiveMaxZoomFactor(for: device)
-            let clampFactor = max(minZoom, min(factor, maxZoom))
-            
-            device.ramp(toVideoZoomFactor: clampFactor, withRate: 2.0)
-            
-            device.unlockForConfiguration()
-            DispatchQueue.main.async { [weak self] in
-                self?.currentZoomFactor = clampFactor
+        runOnSessionQueueAsync { [weak self] in
+            guard let self, let device = self.currentDevice() else { return }
+            do {
+                try device.lockForConfiguration()
+                let minZoom = device.minAvailableVideoZoomFactor
+                let maxZoom = self.effectiveMaxZoomFactor(for: device)
+                let clampFactor = max(minZoom, min(factor, maxZoom))
+                
+                let delta = abs(device.videoZoomFactor - clampFactor)
+                let duration = max(0.04, rampDuration)
+                let rampRate = Float(max(delta / duration, 6.0))
+                device.ramp(toVideoZoomFactor: clampFactor, withRate: rampRate)
+                
+                device.unlockForConfiguration()
+                DispatchQueue.main.async { [weak self] in
+                    self?.currentZoomFactor = clampFactor
+                    self?.currentLens = self?.resolveLensFromZoom(
+                        zoom: clampFactor,
+                        availableLenses: self?.availableLenses ?? []
+                    ) ?? .wide
+                }
             }
-        }
-        catch {
-            print("Comet Camera: set zoom factor failed:", error.localizedDescription)
+            catch {
+                print("Comet Camera: set zoom factor failed:", error.localizedDescription)
+            }
         }
     }
     
@@ -116,7 +125,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         let zoomMax = maxZoomFactor
         
         var presets: [CGFloat] = []
-        if availableLenses.contains(.ultraWide), zoomMin <= 0.55 {
+        if currentCameraPosition == .back, availableLenses.contains(.ultraWide) {
             presets.append(0.5)
         }
         if zoomMin <= 1.0, zoomMax >= 1.0 {
@@ -192,7 +201,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
                 let clampedZoom = max(minZoom, min(targetZoom, maxZoom))
                 let delta = abs(device.videoZoomFactor - clampedZoom)
                 if delta > 0.01 {
-                    let rampRate = Float(max(delta / 0.3, 2.0))
+                    let rampRate = Float(max(delta / 0.12, 6.0))
                     device.ramp(toVideoZoomFactor: clampedZoom, withRate: rampRate)
                 }
                 device.unlockForConfiguration()
@@ -515,13 +524,18 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         }
         
         let zoomFactor = device.videoZoomFactor
-        let factors = sortedSwitchOverFactors(for: device)
+        return resolveLensFromZoom(zoom: zoomFactor, availableLenses: availableLenses, device: device)
+    }
+    
+    private func resolveLensFromZoom(zoom: CGFloat, availableLenses: [LensType], device: AVCaptureDevice? = nil) -> LensType {
+        let zoomFactor = zoom
+        let factors = device.map { sortedSwitchOverFactors(for: $0) } ?? []
         let hasUltra = availableLenses.contains(.ultraWide)
-        let hasTele = availableLenses.contains(.telephoto) || effectiveMaxZoomFactor(for: device) >= 2.0
+        let hasTele = availableLenses.contains(.telephoto)
         
         if hasUltra && hasTele {
             let ultraWideBoundary = factors.first ?? 1.0
-            let teleBoundary = factors.count > 1 ? factors[1] : max(2.0, ultraWideBoundary + 0.5)
+            let teleBoundary = factors.count > 1 ? factors[1] : 2.0
             if zoomFactor < ultraWideBoundary {
                 return .ultraWide
             }
@@ -537,8 +551,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         }
         
         if hasTele {
-            let boundary = factors.first ?? 2.0
-            return zoomFactor >= boundary ? .telephoto : .wide
+            return zoomFactor >= 2.0 ? .telephoto : .wide
         }
         
         return .wide
