@@ -12,42 +12,53 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     let session: AVCaptureSession = AVCaptureSession()
     
     private let cameraDataQueue = DispatchQueue(label: "camera.data.queue")
+    private let sessionQueue = DispatchQueue(label: "camera.session.queue")
+    private let sessionQueueKey = DispatchSpecificKey<UInt8>()
+    
     private var photoCaptureHandlers: [UUID: CMCameraPhotoCaptureDelegate] = [:]
     
     var cameraFrameDataHandler: ((CMSampleBuffer) -> Void)?
+    public var onError: ((String) -> Void)?
     
     @Published public var photoCaptureSettings: CMPhotoCaptureSettings = .default
+    @Published public private(set) var currentCameraPosition: AVCaptureDevice.Position = .unspecified
+    @Published public private(set) var currentLens: LensType = .wide
+    @Published public private(set) var availableLenses: [LensType] = []
     
     public override init() {
         super.init()
+        sessionQueue.setSpecific(key: sessionQueueKey, value: 1)
+        
         do {
-            try setupSession()
+            try runOnSessionQueue {
+                try setupSession()
+            }
+            refreshCameraState()
         }
         catch {
-            switch error {
-            case CMCameraError.inputFailed(let msg):
-                print(msg)
-            default:
-                print(error.localizedDescription)
-            }
+            report(error)
         }
     }
+    
     /// 启动Session
     public func start() {
         guard !session.isRunning else { return }
-        cameraDataQueue.async { [weak self] in
+        runOnSessionQueueAsync { [weak self] in
             self?.session.startRunning()
         }
     }
+    
     /// 停止Session
     public func stop() {
         guard session.isRunning else { return }
-        session.stopRunning()
+        runOnSessionQueueAsync { [weak self] in
+            self?.session.stopRunning()
+        }
     }
     
     public func setFocus(_ point: CGPoint) {
         print("Comet Camera: set focus at:", point)
-        guard let inputDevice = device else { return }
+        guard let inputDevice = currentDevice() else { return }
         do {
             try inputDevice.lockForConfiguration()
             
@@ -74,7 +85,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     
     public func setZoomFactor(_ factor: CGFloat) {
         print("Comet Camera: set zoom factor at:", factor)
-        guard let device else { return }
+        guard let device = currentDevice() else { return }
         do {
             try device.lockForConfiguration()
             let clampFactor = max(1.0, min(factor, device.activeFormat.videoMaxZoomFactor))
@@ -86,6 +97,62 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         catch {
             print("Comet Camera: set zoom factor failed:", error.localizedDescription)
         }
+    }
+    
+    public func getAvailableLenses() -> [LensType] {
+        availableLenses
+    }
+    
+    public func canSwitchCamera() -> Bool {
+        isCameraPositionAvailable(.front) && isCameraPositionAvailable(.back)
+    }
+    
+    @discardableResult
+    public func switchCamera() -> Result<Void, CMCameraError> {
+        let targetPosition: AVCaptureDevice.Position = currentCameraPosition == .front ? .back : .front
+        guard isCameraPositionAvailable(targetPosition) else {
+            let error = CMCameraError.cameraUnavailable(position: targetPosition)
+            report(error)
+            return .failure(error)
+        }
+        
+        if targetPosition == .front {
+            requestMicrophonePermissionIfNeeded()
+        }
+        
+        let preferredLens: LensType = {
+            let frontLenses = discoverLenses(at: .front)
+            if targetPosition == .front, frontLenses.contains(.wide) {
+                return .wide
+            }
+            return currentLens
+        }()
+        
+        let result = switchInput(to: targetPosition, preferredLens: preferredLens)
+        if case .success = result {
+            refreshCameraState()
+        }
+        return result
+    }
+    
+    @discardableResult
+    public func switchLens(to lens: LensType) -> Result<Void, CMCameraError> {
+        let supported = discoverLenses(at: currentCameraPosition)
+        guard supported.contains(lens) else {
+            let error = CMCameraError.lensUnavailable(lens)
+            report(error)
+            return .failure(error)
+        }
+        
+        if lens == currentLens {
+            return .success(())
+        }
+        
+        let result = switchInput(to: currentCameraPosition, preferredLens: lens)
+        if case .success = result {
+            refreshCameraState()
+        }
+        return result
     }
     
     /// 拍照
@@ -115,30 +182,30 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     }
     
     private func setupSession() throws {
-        try addInput()
+        try addInput(position: .back, preferredLens: .wide)
         
         addOutput()
         addPhotoCaptureOutput()
         
     }
     
-    private var device: AVCaptureDevice? {
-        guard let inputDevice = session.inputs.first as? AVCaptureDeviceInput else { return nil }
+    private func currentDevice() -> AVCaptureDevice? {
+        guard let inputDevice = session.inputs.first as? AVCaptureDeviceInput else {
+            return nil
+        }
         return inputDevice.device
     }
     
-    private func addInput() throws {
-        // 超广角: 0.5x
-        // AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back)
-        // 广角: 1.0x
-        // AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
-        // 长焦: 2.0x 或 2.5x/3.0x (根据机型)
-        // AVCaptureDevice.default(.builtInTelephotoCamera, for: .video, position: .back)
+    private func addInput(position: AVCaptureDevice.Position, preferredLens: LensType) throws {
+        guard let device = makeCaptureDevice(position: position, preferredLens: preferredLens) else {
+            throw CMCameraError.cameraUnavailable(position: position)
+        }
         
-        guard let device = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back)
-        else { throw CMCameraError.deviceUnavailable }
         do {
             session.beginConfiguration()
+            for input in session.inputs {
+                session.removeInput(input)
+            }
             let cameraInput = try AVCaptureDeviceInput(device: device)
             if session.canAddInput(cameraInput) {
                 session.addInput(cameraInput)
@@ -147,6 +214,47 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         }
         catch {
             throw CMCameraError.inputFailed(error.localizedDescription)
+        }
+    }
+    
+    private func switchInput(to position: AVCaptureDevice.Position, preferredLens: LensType) -> Result<Void, CMCameraError> {
+        do {
+            try runOnSessionQueue {
+                guard let oldDevice = currentDevice() else {
+                    throw CMCameraError.deviceUnavailable
+                }
+                let snapshot = readConfigurationSnapshot(from: oldDevice)
+                
+                guard let newDevice = makeCaptureDevice(position: position, preferredLens: preferredLens) else {
+                    throw CMCameraError.cameraUnavailable(position: position)
+                }
+                
+                let newInput = try AVCaptureDeviceInput(device: newDevice)
+                
+                session.beginConfiguration()
+                for input in session.inputs {
+                    session.removeInput(input)
+                }
+                
+                guard session.canAddInput(newInput) else {
+                    session.commitConfiguration()
+                    throw CMCameraError.configurationFailed("无法添加摄像头输入。")
+                }
+                session.addInput(newInput)
+                session.commitConfiguration()
+                
+                applyConfigurationSnapshot(snapshot, to: newDevice)
+            }
+            return .success(())
+        }
+        catch let error as CMCameraError {
+            report(error)
+            return .failure(error)
+        }
+        catch {
+            let cameraError = CMCameraError.configurationFailed(error.localizedDescription)
+            report(cameraError)
+            return .failure(cameraError)
         }
     }
     
@@ -185,6 +293,188 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             session.addOutput(photoOutput)
         }
         session.commitConfiguration()
+    }
+    
+    private func refreshCameraState() {
+        let snapshot: (AVCaptureDevice.Position, [LensType], LensType)? = try? runOnSessionQueue {
+            guard let device = currentDevice() else { return nil }
+            let position = device.position
+            let lenses = discoverLenses(at: position)
+            let current = lensType(for: device.deviceType)
+            return (position, lenses, current)
+        }
+        
+        guard let snapshot else { return }
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.currentCameraPosition = snapshot.0
+            self?.availableLenses = snapshot.1
+            self?.currentLens = snapshot.2
+        }
+    }
+    
+    private func makeCaptureDevice(position: AVCaptureDevice.Position, preferredLens: LensType) -> AVCaptureDevice? {
+        let preferredType = deviceType(for: preferredLens)
+        let fallbackTypes = preferredDeviceTypes(for: position)
+            .filter { $0 != preferredType }
+        let candidateTypes = [preferredType] + fallbackTypes
+        
+        for type in candidateTypes {
+            if let device = AVCaptureDevice.default(type, for: .video, position: position) {
+                return device
+            }
+        }
+        
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: preferredDeviceTypes(for: position),
+            mediaType: .video,
+            position: position
+        )
+        return discovery.devices.first
+    }
+    
+    private func preferredDeviceTypes(for position: AVCaptureDevice.Position) -> [AVCaptureDevice.DeviceType] {
+        if position == .front {
+            return [.builtInWideAngleCamera, .builtInTrueDepthCamera]
+        }
+        return [
+            .builtInUltraWideCamera,
+            .builtInWideAngleCamera,
+            .builtInTelephotoCamera,
+            .builtInDualWideCamera,
+            .builtInDualCamera,
+            .builtInTripleCamera
+        ]
+    }
+    
+    private func discoverLenses(at position: AVCaptureDevice.Position) -> [LensType] {
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInUltraWideCamera, .builtInWideAngleCamera, .builtInTelephotoCamera],
+            mediaType: .video,
+            position: position
+        )
+        
+        var result: [LensType] = []
+        for lens in LensType.allCases {
+            if discovery.devices.contains(where: { $0.deviceType == deviceType(for: lens) }) {
+                result.append(lens)
+            }
+        }
+        return result
+    }
+    
+    private func isCameraPositionAvailable(_ position: AVCaptureDevice.Position) -> Bool {
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: preferredDeviceTypes(for: position),
+            mediaType: .video,
+            position: position
+        )
+        return !discovery.devices.isEmpty
+    }
+    
+    private func deviceType(for lens: LensType) -> AVCaptureDevice.DeviceType {
+        switch lens {
+        case .ultraWide:
+            return .builtInUltraWideCamera
+        case .wide:
+            return .builtInWideAngleCamera
+        case .telephoto:
+            return .builtInTelephotoCamera
+        }
+    }
+    
+    private func lensType(for deviceType: AVCaptureDevice.DeviceType) -> LensType {
+        switch deviceType {
+        case .builtInUltraWideCamera:
+            return .ultraWide
+        case .builtInTelephotoCamera:
+            return .telephoto
+        default:
+            return .wide
+        }
+    }
+    
+    private struct DeviceConfigurationSnapshot {
+        let focusMode: AVCaptureDevice.FocusMode?
+        let focusPointOfInterest: CGPoint?
+        let exposureMode: AVCaptureDevice.ExposureMode?
+        let exposurePointOfInterest: CGPoint?
+        let zoomFactor: CGFloat
+    }
+    
+    private func readConfigurationSnapshot(from device: AVCaptureDevice) -> DeviceConfigurationSnapshot {
+        DeviceConfigurationSnapshot(
+            focusMode: device.isFocusModeSupported(device.focusMode) ? device.focusMode : nil,
+            focusPointOfInterest: device.isFocusPointOfInterestSupported ? device.focusPointOfInterest : nil,
+            exposureMode: device.isExposureModeSupported(device.exposureMode) ? device.exposureMode : nil,
+            exposurePointOfInterest: device.isExposurePointOfInterestSupported ? device.exposurePointOfInterest : nil,
+            zoomFactor: device.videoZoomFactor
+        )
+    }
+    
+    private func applyConfigurationSnapshot(_ snapshot: DeviceConfigurationSnapshot, to device: AVCaptureDevice) {
+        do {
+            try device.lockForConfiguration()
+            if let focusMode = snapshot.focusMode, device.isFocusModeSupported(focusMode) {
+                device.focusMode = focusMode
+            }
+            if let focusPoint = snapshot.focusPointOfInterest, device.isFocusPointOfInterestSupported {
+                device.focusPointOfInterest = focusPoint
+            }
+            if let exposureMode = snapshot.exposureMode, device.isExposureModeSupported(exposureMode) {
+                device.exposureMode = exposureMode
+            }
+            if let exposurePoint = snapshot.exposurePointOfInterest, device.isExposurePointOfInterestSupported {
+                device.exposurePointOfInterest = exposurePoint
+            }
+            
+            let clampedZoom = min(max(snapshot.zoomFactor, 1.0), device.activeFormat.videoMaxZoomFactor)
+            device.videoZoomFactor = clampedZoom
+            device.unlockForConfiguration()
+        }
+        catch {
+            report(CMCameraError.configurationFailed(error.localizedDescription))
+        }
+    }
+    
+    private func requestMicrophonePermissionIfNeeded() {
+        let permission = AVAudioSession.sharedInstance().recordPermission
+        guard permission == .undetermined else {
+            if permission == .denied {
+                report(CMCameraError.permissionDenied("麦克风权限被拒绝，若需要录音请在系统设置中开启。"))
+            }
+            return
+        }
+        
+        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+            guard !granted else { return }
+            self?.report(CMCameraError.permissionDenied("麦克风权限被拒绝，若需要录音请在系统设置中开启。"))
+        }
+    }
+    
+    private func runOnSessionQueue<T>(_ operation: () throws -> T) throws -> T {
+        if DispatchQueue.getSpecific(key: sessionQueueKey) != nil {
+            return try operation()
+        }
+        return try sessionQueue.sync {
+            try operation()
+        }
+    }
+    
+    private func runOnSessionQueueAsync(_ operation: @escaping () -> Void) {
+        if DispatchQueue.getSpecific(key: sessionQueueKey) != nil {
+            operation()
+            return
+        }
+        sessionQueue.async(execute: operation)
+    }
+    
+    private func report(_ error: Error) {
+        let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        print("Comet Camera error:", message)
+        DispatchQueue.main.async { [weak self] in
+            self?.onError?(message)
+        }
     }
     
 }

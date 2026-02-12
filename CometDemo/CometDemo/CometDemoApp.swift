@@ -10,13 +10,10 @@ import Camera
 
 @main
 struct CometDemoApp: App {
-    @ObservedObject var camera = CMCamera()
     var body: some Scene {
         WindowGroup {
-            CMCameraView_SwifUI(camera: camera)
-                .task {
-                    camera.start()
-                }
+            CMCameraPreviewDemo()
+                .ignoresSafeArea()
         }
     }
 }
