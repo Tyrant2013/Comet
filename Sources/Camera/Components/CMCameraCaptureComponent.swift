@@ -12,10 +12,12 @@ import Combine
 public struct CMCameraCaptureConfiguration: Sendable {
     public var showZoomSlider: Bool
     public var showSwitchButton: Bool
+    public var showFilterControl: Bool
     
-    public init(showZoomSlider: Bool = true, showSwitchButton: Bool = true) {
+    public init(showZoomSlider: Bool = true, showSwitchButton: Bool = true, showFilterControl: Bool = true) {
         self.showZoomSlider = showZoomSlider
         self.showSwitchButton = showSwitchButton
+        self.showFilterControl = showFilterControl
     }
     
     public static let `default` = CMCameraCaptureConfiguration()
@@ -29,6 +31,7 @@ public final class CMCameraCaptureViewController: UIViewController {
     private let statusLabel = UILabel()
     private let lensStatusLabel = UILabel()
     private let lensControl = UISegmentedControl(items: [])
+    private let filterControl = UISegmentedControl(items: ["无", "黑白", "拍立得", "组合"])
     private let zoomDial = CMCameraZoomDialView()
     private let switchButton = UIButton(type: .system)
     private let loadingIndicator = UIActivityIndicatorView(style: .medium)
@@ -88,6 +91,7 @@ public final class CMCameraCaptureViewController: UIViewController {
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         lensStatusLabel.translatesAutoresizingMaskIntoConstraints = false
         lensControl.translatesAutoresizingMaskIntoConstraints = false
+        filterControl.translatesAutoresizingMaskIntoConstraints = false
         zoomDial.translatesAutoresizingMaskIntoConstraints = false
         switchButton.translatesAutoresizingMaskIntoConstraints = false
         loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
@@ -104,6 +108,12 @@ public final class CMCameraCaptureViewController: UIViewController {
         lensControl.selectedSegmentTintColor = .white
         lensControl.backgroundColor = UIColor(white: 0.1, alpha: 0.9)
         lensControl.addTarget(self, action: #selector(didTapLensControl), for: .valueChanged)
+        
+        filterControl.selectedSegmentTintColor = .white
+        filterControl.backgroundColor = UIColor(white: 0.1, alpha: 0.9)
+        filterControl.selectedSegmentIndex = 0
+        filterControl.addTarget(self, action: #selector(didChangeFilterControl), for: .valueChanged)
+        filterControl.isHidden = !configuration.showFilterControl
         
         zoomDial.isHidden = !configuration.showZoomSlider
         
@@ -126,6 +136,7 @@ public final class CMCameraCaptureViewController: UIViewController {
         view.addSubview(statusLabel)
         view.addSubview(lensStatusLabel)
         view.addSubview(lensControl)
+        view.addSubview(filterControl)
         view.addSubview(zoomDial)
         view.addSubview(switchButton)
         view.addSubview(loadingIndicator)
@@ -154,7 +165,11 @@ public final class CMCameraCaptureViewController: UIViewController {
             lensControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             lensControl.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             lensControl.heightAnchor.constraint(equalToConstant: 36),
-            zoomDial.topAnchor.constraint(equalTo: lensControl.bottomAnchor, constant: 6),
+            filterControl.topAnchor.constraint(equalTo: lensControl.bottomAnchor, constant: 8),
+            filterControl.leadingAnchor.constraint(equalTo: lensControl.leadingAnchor),
+            filterControl.trailingAnchor.constraint(equalTo: lensControl.trailingAnchor),
+            filterControl.heightAnchor.constraint(equalToConstant: 36),
+            zoomDial.topAnchor.constraint(equalTo: filterControl.bottomAnchor, constant: 8),
             zoomDial.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 8),
             zoomDial.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -8),
             zoomDial.heightAnchor.constraint(equalToConstant: 110),
@@ -188,6 +203,7 @@ public final class CMCameraCaptureViewController: UIViewController {
         
         selectionFeedback.prepare()
         impactFeedback.prepare()
+        applySelectedFilters()
     }
     
     private func bindCameraState() {
@@ -286,6 +302,12 @@ public final class CMCameraCaptureViewController: UIViewController {
         let enabled = camera.canSwitchCamera()
         switchButton.isEnabled = enabled
         switchButton.alpha = enabled ? 1.0 : 0.4
+    }
+    
+    @objc
+    private func didChangeFilterControl() {
+        selectionFeedback.selectionChanged()
+        applySelectedFilters()
     }
     
     @objc
@@ -447,10 +469,29 @@ public final class CMCameraCaptureViewController: UIViewController {
     
     private func setLoading(_ loading: Bool) {
         lensControl.isEnabled = !loading
+        filterControl.isEnabled = configuration.showFilterControl && !loading
         zoomDial.isUserInteractionEnabled = configuration.showZoomSlider && !loading
         zoomDial.alpha = configuration.showZoomSlider ? 1.0 : 0.0
         switchButton.isEnabled = configuration.showSwitchButton && !loading && camera.canSwitchCamera()
         loading ? loadingIndicator.startAnimating() : loadingIndicator.stopAnimating()
+    }
+    
+    private func applySelectedFilters() {
+        let filters: [CMCameraFilter]
+        switch filterControl.selectedSegmentIndex {
+        case 1:
+            filters = [.monochrome(intensity: 1.0)]
+        case 2:
+            filters = [.polaroid(intensity: 1.0, warmth: 0.18, fade: 0.08)]
+        case 3:
+            filters = [
+                .polaroid(intensity: 0.9, warmth: 0.16, fade: 0.06),
+                .monochrome(intensity: 0.3)
+            ]
+        default:
+            filters = []
+        }
+        camera.setFilters(filters)
     }
 }
 

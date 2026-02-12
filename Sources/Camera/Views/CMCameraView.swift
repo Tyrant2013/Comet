@@ -25,6 +25,9 @@ public class CMCameraView: UIView {
         super.init(frame: .zero)
         
         camera.cameraFrameDataHandler = cameraDataUpdate
+        renderer.filterProvider = { [weak camera] in
+            camera?.getActiveFilters() ?? []
+        }
         
         setupUI()
     }
@@ -121,12 +124,8 @@ extension CMCameraView: MTKViewDelegate {
     }
     
     public func draw(in view: MTKView) {
-        guard let pipelineState = CMMetalPipelineState.shared.pipelineState
-        else { return }
-        
         renderer.draw(
             in: view,
-            pipelineState: pipelineState,
             commandQueue: CMMetalDevice.shared.commandQueue
         )
     }

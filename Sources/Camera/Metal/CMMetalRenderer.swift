@@ -13,6 +13,7 @@ class CMMetalRenderer: NSObject {
     private let textureQueue = DispatchQueue(label: "camera.metal.texture.queue")
     private var currentTexture: MTLTexture?
     private let vertexBuffer: MTLBuffer?
+    var filterProvider: (() -> [CMCameraFilter])?
     
     init(device: MTLDevice) {
         let vertices: [Float] = [
@@ -35,20 +36,22 @@ class CMMetalRenderer: NSObject {
         }
     }
     
-    func draw(in view: MTKView, pipelineState: MTLRenderPipelineState, commandQueue: MTLCommandQueue) {
+    func draw(in view: MTKView, commandQueue: MTLCommandQueue) {
         guard let drawable = view.currentDrawable,
               let descriptor = view.currentRenderPassDescriptor
         else { return }
         
         let texture = textureQueue.sync { currentTexture }
         guard let texture else { return }
+        let filters = filterProvider?() ?? []
         
-        commandQueue.enqueueVertexBuffer(
-            vertexBuffer,
+        CMMetalFilterProcessor.shared.drawPreview(
             texture: texture,
+            filters: filters,
+            vertexBuffer: vertexBuffer,
             drawable: drawable,
-            pipelineState: pipelineState,
-            renderPassDescriptor: descriptor
+            renderPassDescriptor: descriptor,
+            commandQueue: commandQueue
         )
     }
 }

@@ -7,6 +7,7 @@
 
 import UIKit
 import AVFoundation
+import Combine
 
 public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     let session: AVCaptureSession = AVCaptureSession()
@@ -16,6 +17,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     private let sessionQueueKey = DispatchSpecificKey<UInt8>()
     
     private var photoCaptureHandlers: [UUID: CMCameraPhotoCaptureDelegate] = [:]
+    private var filterPipelineCancellable: AnyCancellable?
     
     var cameraFrameDataHandler: ((CMSampleBuffer) -> Void)?
     public var onError: ((String) -> Void)?
@@ -27,10 +29,20 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     @Published public private(set) var currentZoomFactor: CGFloat = 1.0
     @Published public private(set) var minZoomFactor: CGFloat = 1.0
     @Published public private(set) var maxZoomFactor: CGFloat = 1.0
+    @Published public private(set) var activeFilters: [CMCameraFilter] = []
+    
+    public let filterPipeline: CMCameraFilterPipeline
     
     public override init() {
+        filterPipeline = CMCameraFilterPipeline()
         super.init()
         sessionQueue.setSpecific(key: sessionQueueKey, value: 1)
+        
+        filterPipelineCancellable = filterPipeline.$filters
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] filters in
+                self?.activeFilters = filters
+            }
         
         do {
             try runOnSessionQueue {
@@ -244,6 +256,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     /// 拍照
     public func takePhoto() async -> CMPhoto? {
         guard let photoOutput = session.outputs.first(where: { $0 is AVCapturePhotoOutput }) as? AVCapturePhotoOutput else { return nil }
+        let filters = getActiveFilters()
         
         let setting = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
         setting.flashMode = photoCaptureSettings.flashMode
@@ -255,7 +268,11 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
                 strongSelf?.photoCaptureHandlers.removeValue(forKey: id)
                 
                 if let pixelBuffer = sampleBuffer {
-                    let photo = CMPhoto(pixelBuffer: pixelBuffer)
+                    let outputBuffer = CMMetalFilterProcessor.shared.applyFilters(
+                        to: pixelBuffer,
+                        filters: filters
+                    ) ?? pixelBuffer
+                    let photo = CMPhoto(pixelBuffer: outputBuffer)
                     checkedContinuation.resume(returning: photo)
                 }
                 else {
@@ -265,6 +282,47 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             photoCaptureHandlers[photoCaptureDelegate.id] = photoCaptureDelegate
             photoOutput.capturePhoto(with: setting, delegate: photoCaptureDelegate)
         }
+    }
+    
+    public func getActiveFilters() -> [CMCameraFilter] {
+        filterPipeline.snapshot()
+    }
+    
+    public func setFilters(_ filters: [CMCameraFilter]) {
+        filterPipeline.replace(with: filters)
+    }
+    
+    public func addFilter(_ filter: CMCameraFilter) {
+        filterPipeline.append(filter)
+    }
+    
+    public func removeFirstFilter(kind: CMCameraFilterKind) {
+        filterPipeline.removeFirst(kind: kind)
+    }
+    
+    public func removeAllFilters(kind: CMCameraFilterKind) {
+        filterPipeline.removeAll(kind: kind)
+    }
+    
+    public func clearFilters() {
+        filterPipeline.clear()
+    }
+    
+    public func applyFilters(to pixelBuffer: CVPixelBuffer, filters: [CMCameraFilter]) -> CVPixelBuffer {
+        CMMetalFilterProcessor.shared.applyFilters(to: pixelBuffer, filters: filters) ?? pixelBuffer
+    }
+    
+    public func applyCurrentFilters(to pixelBuffer: CVPixelBuffer) -> CVPixelBuffer {
+        applyFilters(to: pixelBuffer, filters: getActiveFilters())
+    }
+    
+    public func applyFilters(to photo: CMPhoto, filters: [CMCameraFilter]) -> CMPhoto {
+        let processed = applyFilters(to: photo.pixelBuffer, filters: filters)
+        return CMPhoto(pixelBuffer: processed)
+    }
+    
+    public func applyCurrentFilters(to photo: CMPhoto) -> CMPhoto {
+        applyFilters(to: photo, filters: getActiveFilters())
     }
     
     private func setupSession() throws {
