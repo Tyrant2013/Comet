@@ -92,6 +92,9 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
         view.addSubview(switchButton)
         view.addSubview(loadingIndicator)
         
+        let previewRatio = cameraView.heightAnchor.constraint(equalTo: cameraView.widthAnchor, multiplier: 16.0 / 9.0)
+        previewRatio.priority = .defaultHigh
+        
         NSLayoutConstraint.activate([
             statusLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
             statusLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -100,19 +103,21 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
             lensStatusLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             
             cameraView.topAnchor.constraint(equalTo: lensStatusLabel.bottomAnchor, constant: 10),
-            cameraView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            cameraView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            cameraView.heightAnchor.constraint(equalTo: cameraView.widthAnchor, multiplier: 16.0 / 9.0),
+            cameraView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            cameraView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            previewRatio,
             
             lensControl.topAnchor.constraint(equalTo: cameraView.bottomAnchor, constant: 16),
-            lensControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            lensControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            lensControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            lensControl.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             lensControl.heightAnchor.constraint(equalToConstant: 36),
+            cameraView.bottomAnchor.constraint(lessThanOrEqualTo: lensControl.topAnchor, constant: -16),
             
             switchButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
             switchButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             switchButton.widthAnchor.constraint(equalToConstant: 68),
             switchButton.heightAnchor.constraint(equalToConstant: 68),
+            lensControl.bottomAnchor.constraint(lessThanOrEqualTo: switchButton.topAnchor, constant: -16),
             
             loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             loadingIndicator.centerYAnchor.constraint(equalTo: lensControl.centerYAnchor)
@@ -213,25 +218,29 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
     @objc
     private func didTapSwitchButton() {
         setLoading(true)
-        
-        let result = camera.switchCamera()
-        switch result {
-        case .success:
-            UIView.transition(with: cameraView, duration: 0.3, options: [.transitionFlipFromLeft, .curveEaseInOut]) {
-                self.cameraView.layoutIfNeeded()
-            }
-            UIView.animate(withDuration: 0.3) {
-                self.switchButton.transform = self.switchButton.transform.rotated(by: .pi)
-            }
-            refreshLensOptions()
-            refreshStatus()
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let result = self.camera.switchCamera()
             
-        case .failure:
-            refreshLensSelection()
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.setLoading(false)
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    UIView.transition(with: self.cameraView, duration: 0.3, options: [.transitionFlipFromLeft, .curveEaseInOut]) {
+                        self.cameraView.layoutIfNeeded()
+                    }
+                    UIView.animate(withDuration: 0.3) {
+                        self.switchButton.transform = self.switchButton.transform.rotated(by: .pi)
+                    }
+                    self.refreshLensOptions()
+                    self.refreshStatus()
+                    
+                case .failure:
+                    self.refreshLensSelection()
+                }
+                
+                self.setLoading(false)
+            }
         }
     }
     
