@@ -16,15 +16,17 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
     private let statusLabel = UILabel()
     private let lensStatusLabel = UILabel()
     private let lensControl = UISegmentedControl(items: [])
+    private let zoomSlider = UISlider()
     private let switchButton = UIButton(type: .system)
     private let loadingIndicator = UIActivityIndicatorView(style: .medium)
     private let transitionSnapshotView = UIImageView()
     
-    private var lensOptions: [LensType] = []
+    private var zoomOptions: [CGFloat] = []
     private var cancellables: Set<AnyCancellable> = []
     private var isSwitchingCamera = false
     private var isAwaitingFirstFrameAfterSwitch = false
     private var switchTransitionToken: UUID?
+    private var isUpdatingSliderProgrammatically = false
     
     public init(camera: CMCamera = CMCamera()) {
         self.camera = camera
@@ -66,6 +68,7 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         lensStatusLabel.translatesAutoresizingMaskIntoConstraints = false
         lensControl.translatesAutoresizingMaskIntoConstraints = false
+        zoomSlider.translatesAutoresizingMaskIntoConstraints = false
         switchButton.translatesAutoresizingMaskIntoConstraints = false
         loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
         transitionSnapshotView.translatesAutoresizingMaskIntoConstraints = false
@@ -81,6 +84,11 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
         lensControl.selectedSegmentTintColor = .white
         lensControl.backgroundColor = UIColor(white: 0.1, alpha: 0.9)
         lensControl.addTarget(self, action: #selector(didTapLensControl), for: .valueChanged)
+        
+        zoomSlider.minimumTrackTintColor = .white
+        zoomSlider.maximumTrackTintColor = UIColor(white: 0.35, alpha: 1)
+        zoomSlider.thumbTintColor = .white
+        zoomSlider.addTarget(self, action: #selector(didSlideZoom), for: .valueChanged)
         
         let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .bold)
         switchButton.setImage(UIImage(systemName: "arrow.triangle.2.circlepath.camera", withConfiguration: config), for: .normal)
@@ -100,6 +108,7 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
         view.addSubview(statusLabel)
         view.addSubview(lensStatusLabel)
         view.addSubview(lensControl)
+        view.addSubview(zoomSlider)
         view.addSubview(switchButton)
         view.addSubview(loadingIndicator)
         
@@ -127,13 +136,16 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
             lensControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             lensControl.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             lensControl.heightAnchor.constraint(equalToConstant: 36),
+            zoomSlider.topAnchor.constraint(equalTo: lensControl.bottomAnchor, constant: 12),
+            zoomSlider.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
+            zoomSlider.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
             cameraView.bottomAnchor.constraint(lessThanOrEqualTo: lensControl.topAnchor, constant: -16),
             
             switchButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
             switchButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             switchButton.widthAnchor.constraint(equalToConstant: 68),
             switchButton.heightAnchor.constraint(equalToConstant: 68),
-            lensControl.bottomAnchor.constraint(lessThanOrEqualTo: switchButton.topAnchor, constant: -16),
+            zoomSlider.bottomAnchor.constraint(lessThanOrEqualTo: switchButton.topAnchor, constant: -12),
             
             loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             loadingIndicator.centerYAnchor.constraint(equalTo: lensControl.centerYAnchor)
@@ -162,6 +174,23 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.refreshLensOptions() }
             .store(in: &cancellables)
+        
+        camera.$currentZoomFactor
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] zoom in
+                guard let self else { return }
+                self.refreshStatus()
+                self.updateSliderValue(zoom)
+                self.refreshLensSelection()
+            }
+            .store(in: &cancellables)
+        
+        Publishers.CombineLatest(camera.$minZoomFactor, camera.$maxZoomFactor)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] minZoom, maxZoom in
+                self?.configureSlider(minZoom: minZoom, maxZoom: maxZoom)
+            }
+            .store(in: &cancellables)
     }
     
     private func configureCameraCallbacks() {
@@ -174,26 +203,29 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
     }
     
     private func refreshLensOptions() {
-        let lenses = camera.getAvailableLenses()
-        if lenses == lensOptions {
+        let options = camera.getAvailableZoomPresets()
+        if options == zoomOptions {
             refreshLensSelection()
             refreshSwitchButtonState()
             return
         }
         
-        lensOptions = lenses
+        zoomOptions = options
         lensControl.removeAllSegments()
-        for (index, lens) in lenses.enumerated() {
-            lensControl.insertSegment(withTitle: lens.displayName, at: index, animated: false)
+        for (index, zoom) in options.enumerated() {
+            lensControl.insertSegment(withTitle: zoomLabel(zoom), at: index, animated: false)
         }
         
-        lensControl.isEnabled = !lenses.isEmpty
+        lensControl.isEnabled = !options.isEmpty
         refreshLensSelection()
         refreshSwitchButtonState()
     }
     
     private func refreshLensSelection() {
-        guard let index = lensOptions.firstIndex(of: camera.currentLens) else {
+        let currentZoom = camera.currentZoomFactor
+        guard let index = zoomOptions.enumerated().min(by: {
+            abs($0.element - currentZoom) < abs($1.element - currentZoom)
+        })?.offset else {
             lensControl.selectedSegmentIndex = UISegmentedControl.noSegment
             return
         }
@@ -211,7 +243,7 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
             positionText = "未知"
         }
         statusLabel.text = "当前摄像头：\(positionText)"
-        lensStatusLabel.text = "当前镜头：\(camera.currentLens.statusName)"
+        lensStatusLabel.text = "当前倍率：\(String(format: "%.1fx", camera.currentZoomFactor))"
     }
     
     private func refreshSwitchButtonState() {
@@ -222,17 +254,23 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
     
     @objc
     private func didTapLensControl() {
-        guard lensControl.selectedSegmentIndex >= 0, lensControl.selectedSegmentIndex < lensOptions.count else {
+        guard lensControl.selectedSegmentIndex >= 0, lensControl.selectedSegmentIndex < zoomOptions.count else {
             return
         }
-        let targetLens = lensOptions[lensControl.selectedSegmentIndex]
+        let targetZoom = zoomOptions[lensControl.selectedSegmentIndex]
         
         setLoading(true)
-        _ = camera.switchLens(to: targetLens)
+        camera.setZoomFactor(targetZoom)
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             self?.setLoading(false)
         }
+    }
+    
+    @objc
+    private func didSlideZoom() {
+        guard !isUpdatingSliderProgrammatically else { return }
+        camera.setZoomFactor(CGFloat(zoomSlider.value))
     }
     
     @objc
@@ -321,8 +359,28 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
         })
     }
     
+    private func configureSlider(minZoom: CGFloat, maxZoom: CGFloat) {
+        let clampedMin = max(0.5, minZoom)
+        let clampedMax = max(clampedMin, min(10.0, maxZoom))
+        zoomSlider.minimumValue = Float(clampedMin)
+        zoomSlider.maximumValue = Float(clampedMax)
+        updateSliderValue(camera.currentZoomFactor)
+    }
+    
+    private func updateSliderValue(_ zoom: CGFloat) {
+        let clamped = max(CGFloat(zoomSlider.minimumValue), min(zoom, CGFloat(zoomSlider.maximumValue)))
+        isUpdatingSliderProgrammatically = true
+        zoomSlider.value = Float(clamped)
+        isUpdatingSliderProgrammatically = false
+    }
+    
+    private func zoomLabel(_ zoom: CGFloat) -> String {
+        String(format: "%.1fx", zoom)
+    }
+    
     private func setLoading(_ loading: Bool) {
         lensControl.isEnabled = !loading
+        zoomSlider.isEnabled = !loading
         switchButton.isEnabled = !loading && camera.canSwitchCamera()
         loading ? loadingIndicator.startAnimating() : loadingIndicator.stopAnimating()
     }

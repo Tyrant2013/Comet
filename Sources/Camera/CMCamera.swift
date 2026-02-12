@@ -24,6 +24,9 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     @Published public private(set) var currentCameraPosition: AVCaptureDevice.Position = .unspecified
     @Published public private(set) var currentLens: LensType = .wide
     @Published public private(set) var availableLenses: [LensType] = []
+    @Published public private(set) var currentZoomFactor: CGFloat = 1.0
+    @Published public private(set) var minZoomFactor: CGFloat = 1.0
+    @Published public private(set) var maxZoomFactor: CGFloat = 1.0
     
     public override init() {
         super.init()
@@ -89,12 +92,15 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         do {
             try device.lockForConfiguration()
             let minZoom = device.minAvailableVideoZoomFactor
-            let maxZoom = min(device.activeFormat.videoMaxZoomFactor, device.maxAvailableVideoZoomFactor)
+            let maxZoom = effectiveMaxZoomFactor(for: device)
             let clampFactor = max(minZoom, min(factor, maxZoom))
             
             device.ramp(toVideoZoomFactor: clampFactor, withRate: 2.0)
             
             device.unlockForConfiguration()
+            DispatchQueue.main.async { [weak self] in
+                self?.currentZoomFactor = clampFactor
+            }
         }
         catch {
             print("Comet Camera: set zoom factor failed:", error.localizedDescription)
@@ -103,6 +109,27 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     
     public func getAvailableLenses() -> [LensType] {
         availableLenses
+    }
+    
+    public func getAvailableZoomPresets() -> [CGFloat] {
+        let zoomMin = minZoomFactor
+        let zoomMax = maxZoomFactor
+        
+        var presets: [CGFloat] = []
+        if availableLenses.contains(.ultraWide), zoomMin <= 0.55 {
+            presets.append(0.5)
+        }
+        if zoomMin <= 1.0, zoomMax >= 1.0 {
+            presets.append(1.0)
+        }
+        if currentCameraPosition == .back, zoomMax >= 2.0 {
+            presets.append(2.0)
+        }
+        
+        if presets.isEmpty {
+            presets = [min(max(1.0, zoomMin), zoomMax)]
+        }
+        return presets
     }
     
     public func canSwitchCamera() -> Bool {
@@ -139,22 +166,19 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     
     @discardableResult
     public func switchLens(to lens: LensType) -> Result<Void, CMCameraError> {
-        let supported = discoverLenses(at: currentCameraPosition)
-        guard supported.contains(lens) else {
-            let error = CMCameraError.lensUnavailable(lens)
-            report(error)
-            return .failure(error)
-        }
-        
-        if lens == currentLens {
-            return .success(())
-        }
-        
         do {
             let switchedSmoothly = try runOnSessionQueue {
                 guard let device = currentDevice() else {
                     throw CMCameraError.deviceUnavailable
                 }
+                let supported = buildAvailableLenses(position: device.position, device: device)
+                guard supported.contains(lens) else {
+                    throw CMCameraError.lensUnavailable(lens)
+                }
+                if lens == currentLens {
+                    return true
+                }
+                
                 guard device.position == .back, isVirtualMultiLensDevice(device) else {
                     return false
                 }
@@ -164,7 +188,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
                 
                 try device.lockForConfiguration()
                 let minZoom = device.minAvailableVideoZoomFactor
-                let maxZoom = min(device.activeFormat.videoMaxZoomFactor, device.maxAvailableVideoZoomFactor)
+                let maxZoom = effectiveMaxZoomFactor(for: device)
                 let clampedZoom = max(minZoom, min(targetZoom, maxZoom))
                 let delta = abs(device.videoZoomFactor - clampedZoom)
                 if delta > 0.01 {
@@ -178,6 +202,15 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             if switchedSmoothly {
                 DispatchQueue.main.async { [weak self] in
                     self?.currentLens = lens
+                    if lens == .ultraWide {
+                        self?.currentZoomFactor = 0.5
+                    }
+                    else if lens == .wide {
+                        self?.currentZoomFactor = 1.0
+                    }
+                    else {
+                        self?.currentZoomFactor = 2.0
+                    }
                 }
                 return .success(())
             }
@@ -340,12 +373,15 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     }
     
     private func refreshCameraState() {
-        let snapshot: (AVCaptureDevice.Position, [LensType], LensType)? = try? runOnSessionQueue {
+        let snapshot: (AVCaptureDevice.Position, [LensType], LensType, CGFloat, CGFloat, CGFloat)? = try? runOnSessionQueue {
             guard let device = currentDevice() else { return nil }
             let position = device.position
-            let lenses = discoverLenses(at: position)
+            let lenses = buildAvailableLenses(position: position, device: device)
             let current = resolveCurrentLens(device: device, availableLenses: lenses)
-            return (position, lenses, current)
+            let minZoom = device.minAvailableVideoZoomFactor
+            let maxZoom = effectiveMaxZoomFactor(for: device)
+            let zoom = max(minZoom, min(device.videoZoomFactor, maxZoom))
+            return (position, lenses, current, minZoom, maxZoom, zoom)
         }
         
         guard let snapshot else { return }
@@ -354,6 +390,9 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             self?.currentCameraPosition = snapshot.0
             self?.availableLenses = snapshot.1
             self?.currentLens = snapshot.2
+            self?.minZoomFactor = snapshot.3
+            self?.maxZoomFactor = snapshot.4
+            self?.currentZoomFactor = snapshot.5
         }
     }
     
@@ -420,6 +459,25 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         return result
     }
     
+    private func buildAvailableLenses(position: AVCaptureDevice.Position, device: AVCaptureDevice) -> [LensType] {
+        var result = discoverLenses(at: position)
+        
+        if !result.contains(.wide) {
+            result.append(.wide)
+        }
+        
+        if position == .back {
+            if device.minAvailableVideoZoomFactor < 1.0, !result.contains(.ultraWide) {
+                result.append(.ultraWide)
+            }
+            if effectiveMaxZoomFactor(for: device) >= 2.0, !result.contains(.telephoto) {
+                result.append(.telephoto)
+            }
+        }
+        
+        return LensType.allCases.filter { result.contains($0) }
+    }
+    
     private func isCameraPositionAvailable(_ position: AVCaptureDevice.Position) -> Bool {
         let discovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: preferredDeviceTypes(for: position),
@@ -459,7 +517,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         let zoomFactor = device.videoZoomFactor
         let factors = sortedSwitchOverFactors(for: device)
         let hasUltra = availableLenses.contains(.ultraWide)
-        let hasTele = availableLenses.contains(.telephoto)
+        let hasTele = availableLenses.contains(.telephoto) || effectiveMaxZoomFactor(for: device) >= 2.0
         
         if hasUltra && hasTele {
             let ultraWideBoundary = factors.first ?? 1.0
@@ -504,7 +562,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     private func targetZoomFactor(for lens: LensType, device: AVCaptureDevice, supportedLenses: [LensType]) -> CGFloat? {
         let factors = sortedSwitchOverFactors(for: device)
         let hasUltra = supportedLenses.contains(.ultraWide)
-        let hasTele = supportedLenses.contains(.telephoto)
+        let hasTele = supportedLenses.contains(.telephoto) || effectiveMaxZoomFactor(for: device) >= 2.0
         
         switch lens {
         case .ultraWide:
@@ -518,6 +576,9 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             
         case .telephoto:
             guard hasTele else { return nil }
+            if !supportedLenses.contains(.telephoto) {
+                return 2.0
+            }
             let boundary: CGFloat
             if hasUltra {
                 boundary = factors.count > 1 ? factors[1] : max(2.0, (factors.first ?? 1.0) + 0.5)
@@ -564,7 +625,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             }
             
             let minZoom = device.minAvailableVideoZoomFactor
-            let maxZoom = min(device.activeFormat.videoMaxZoomFactor, device.maxAvailableVideoZoomFactor)
+            let maxZoom = effectiveMaxZoomFactor(for: device)
             let clampedZoom = min(max(snapshot.zoomFactor, minZoom), maxZoom)
             device.videoZoomFactor = clampedZoom
             device.unlockForConfiguration()
@@ -604,6 +665,10 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             return
         }
         sessionQueue.async(execute: operation)
+    }
+    
+    private func effectiveMaxZoomFactor(for device: AVCaptureDevice) -> CGFloat {
+        min(10.0, min(device.activeFormat.videoMaxZoomFactor, device.maxAvailableVideoZoomFactor))
     }
     
     private func report(_ error: Error) {

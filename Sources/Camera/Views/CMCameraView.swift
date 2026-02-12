@@ -81,14 +81,15 @@ public class CMCameraView: UIView {
         switch sender.state {
         case .began:
             isPinching = true
+            beginZoomFactor = camera.currentZoomFactor
             
         case .changed:
             // 计算新的缩放值
             desiredZoomFactor = beginZoomFactor * sender.scale
             
             // 限制缩放范围
-            let minZoom: CGFloat = 1.0
-            let maxZoom = 5.0
+            let minZoom = camera.minZoomFactor
+            let maxZoom = camera.maxZoomFactor
             desiredZoomFactor = min(max(desiredZoomFactor, minZoom), maxZoom)
             currentZoomFactor = desiredZoomFactor
             
