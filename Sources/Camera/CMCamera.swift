@@ -88,7 +88,9 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         guard let device = currentDevice() else { return }
         do {
             try device.lockForConfiguration()
-            let clampFactor = max(1.0, min(factor, device.activeFormat.videoMaxZoomFactor))
+            let minZoom = device.minAvailableVideoZoomFactor
+            let maxZoom = min(device.activeFormat.videoMaxZoomFactor, device.maxAvailableVideoZoomFactor)
+            let clampFactor = max(minZoom, min(factor, maxZoom))
             
             device.ramp(toVideoZoomFactor: clampFactor, withRate: 2.0)
             
@@ -146,6 +148,48 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         
         if lens == currentLens {
             return .success(())
+        }
+        
+        do {
+            let switchedSmoothly = try runOnSessionQueue {
+                guard let device = currentDevice() else {
+                    throw CMCameraError.deviceUnavailable
+                }
+                guard device.position == .back, isVirtualMultiLensDevice(device) else {
+                    return false
+                }
+                guard let targetZoom = targetZoomFactor(for: lens, device: device, supportedLenses: supported) else {
+                    throw CMCameraError.lensUnavailable(lens)
+                }
+                
+                try device.lockForConfiguration()
+                let minZoom = device.minAvailableVideoZoomFactor
+                let maxZoom = min(device.activeFormat.videoMaxZoomFactor, device.maxAvailableVideoZoomFactor)
+                let clampedZoom = max(minZoom, min(targetZoom, maxZoom))
+                let delta = abs(device.videoZoomFactor - clampedZoom)
+                if delta > 0.01 {
+                    let rampRate = Float(max(delta / 0.3, 2.0))
+                    device.ramp(toVideoZoomFactor: clampedZoom, withRate: rampRate)
+                }
+                device.unlockForConfiguration()
+                return true
+            }
+            
+            if switchedSmoothly {
+                DispatchQueue.main.async { [weak self] in
+                    self?.currentLens = lens
+                }
+                return .success(())
+            }
+        }
+        catch let error as CMCameraError {
+            report(error)
+            return .failure(error)
+        }
+        catch {
+            let cameraError = CMCameraError.configurationFailed(error.localizedDescription)
+            report(cameraError)
+            return .failure(cameraError)
         }
         
         let result = switchInput(to: currentCameraPosition, preferredLens: lens)
@@ -300,7 +344,7 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             guard let device = currentDevice() else { return nil }
             let position = device.position
             let lenses = discoverLenses(at: position)
-            let current = lensType(for: device.deviceType)
+            let current = resolveCurrentLens(device: device, availableLenses: lenses)
             return (position, lenses, current)
         }
         
@@ -314,6 +358,19 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
     }
     
     private func makeCaptureDevice(position: AVCaptureDevice.Position, preferredLens: LensType) -> AVCaptureDevice? {
+        if position == .back {
+            let virtualTypes: [AVCaptureDevice.DeviceType] = [
+                .builtInTripleCamera,
+                .builtInDualWideCamera,
+                .builtInDualCamera
+            ]
+            for type in virtualTypes {
+                if let device = AVCaptureDevice.default(type, for: .video, position: .back) {
+                    return device
+                }
+            }
+        }
+        
         let preferredType = deviceType(for: preferredLens)
         let fallbackTypes = preferredDeviceTypes(for: position)
             .filter { $0 != preferredType }
@@ -338,12 +395,12 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
             return [.builtInWideAngleCamera, .builtInTrueDepthCamera]
         }
         return [
-            .builtInUltraWideCamera,
-            .builtInWideAngleCamera,
-            .builtInTelephotoCamera,
+            .builtInTripleCamera,
             .builtInDualWideCamera,
             .builtInDualCamera,
-            .builtInTripleCamera
+            .builtInUltraWideCamera,
+            .builtInWideAngleCamera,
+            .builtInTelephotoCamera
         ]
     }
     
@@ -394,6 +451,84 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
         }
     }
     
+    private func resolveCurrentLens(device: AVCaptureDevice, availableLenses: [LensType]) -> LensType {
+        guard device.position == .back, isVirtualMultiLensDevice(device) else {
+            return lensType(for: device.deviceType)
+        }
+        
+        let zoomFactor = device.videoZoomFactor
+        let factors = sortedSwitchOverFactors(for: device)
+        let hasUltra = availableLenses.contains(.ultraWide)
+        let hasTele = availableLenses.contains(.telephoto)
+        
+        if hasUltra && hasTele {
+            let ultraWideBoundary = factors.first ?? 1.0
+            let teleBoundary = factors.count > 1 ? factors[1] : max(2.0, ultraWideBoundary + 0.5)
+            if zoomFactor < ultraWideBoundary {
+                return .ultraWide
+            }
+            if zoomFactor >= teleBoundary {
+                return .telephoto
+            }
+            return .wide
+        }
+        
+        if hasUltra {
+            let boundary = factors.first ?? 1.0
+            return zoomFactor < boundary ? .ultraWide : .wide
+        }
+        
+        if hasTele {
+            let boundary = factors.first ?? 2.0
+            return zoomFactor >= boundary ? .telephoto : .wide
+        }
+        
+        return .wide
+    }
+    
+    private func isVirtualMultiLensDevice(_ device: AVCaptureDevice) -> Bool {
+        switch device.deviceType {
+        case .builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    private func sortedSwitchOverFactors(for device: AVCaptureDevice) -> [CGFloat] {
+        device.virtualDeviceSwitchOverVideoZoomFactors
+            .map { CGFloat(truncating: $0) }
+            .sorted()
+    }
+    
+    private func targetZoomFactor(for lens: LensType, device: AVCaptureDevice, supportedLenses: [LensType]) -> CGFloat? {
+        let factors = sortedSwitchOverFactors(for: device)
+        let hasUltra = supportedLenses.contains(.ultraWide)
+        let hasTele = supportedLenses.contains(.telephoto)
+        
+        switch lens {
+        case .ultraWide:
+            return hasUltra ? device.minAvailableVideoZoomFactor : nil
+            
+        case .wide:
+            if hasUltra {
+                return factors.first ?? 1.0
+            }
+            return 1.0
+            
+        case .telephoto:
+            guard hasTele else { return nil }
+            let boundary: CGFloat
+            if hasUltra {
+                boundary = factors.count > 1 ? factors[1] : max(2.0, (factors.first ?? 1.0) + 0.5)
+            }
+            else {
+                boundary = factors.first ?? 2.0
+            }
+            return boundary + 0.15
+        }
+    }
+    
     private struct DeviceConfigurationSnapshot {
         let focusMode: AVCaptureDevice.FocusMode?
         let focusPointOfInterest: CGPoint?
@@ -428,7 +563,9 @@ public class CMCamera: NSObject, @unchecked Sendable, ObservableObject {
                 device.exposurePointOfInterest = exposurePoint
             }
             
-            let clampedZoom = min(max(snapshot.zoomFactor, 1.0), device.activeFormat.videoMaxZoomFactor)
+            let minZoom = device.minAvailableVideoZoomFactor
+            let maxZoom = min(device.activeFormat.videoMaxZoomFactor, device.maxAvailableVideoZoomFactor)
+            let clampedZoom = min(max(snapshot.zoomFactor, minZoom), maxZoom)
             device.videoZoomFactor = clampedZoom
             device.unlockForConfiguration()
         }
