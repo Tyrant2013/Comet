@@ -15,6 +15,7 @@ public class CMCameraView: UIView {
     let camera: CMCamera
     private let metalPreview: MTKView = .init(frame: .zero, device: CMMetalDevice.shared.device)
     private let renderer: CMMetalRenderer
+    public var onFrameRendered: (() -> Void)?
     
     private var focusAnimatedView: CMCameraFocusAnimatedView = CMCameraFocusAnimatedView()
     
@@ -109,6 +110,9 @@ extension CMCameraView: MTKViewDelegate {
     
     func cameraDataUpdate(_ sampleBuffer: CMSampleBuffer) {
         renderer.update(sampleBuffer: sampleBuffer, textureCache: CMMetalDevice.shared.metalTextureCache)
+        DispatchQueue.main.async { [weak self] in
+            self?.onFrameRendered?()
+        }
     }
     
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {

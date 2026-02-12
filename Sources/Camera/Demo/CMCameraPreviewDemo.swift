@@ -18,9 +18,13 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
     private let lensControl = UISegmentedControl(items: [])
     private let switchButton = UIButton(type: .system)
     private let loadingIndicator = UIActivityIndicatorView(style: .medium)
+    private let transitionSnapshotView = UIImageView()
     
     private var lensOptions: [LensType] = []
     private var cancellables: Set<AnyCancellable> = []
+    private var isSwitchingCamera = false
+    private var isAwaitingFirstFrameAfterSwitch = false
+    private var switchTransitionToken: UUID?
     
     public init(camera: CMCamera = CMCamera()) {
         self.camera = camera
@@ -64,6 +68,7 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
         lensControl.translatesAutoresizingMaskIntoConstraints = false
         switchButton.translatesAutoresizingMaskIntoConstraints = false
         loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
+        transitionSnapshotView.translatesAutoresizingMaskIntoConstraints = false
         
         statusLabel.font = .systemFont(ofSize: 16, weight: .semibold)
         statusLabel.textColor = .white
@@ -85,7 +90,13 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
         loadingIndicator.hidesWhenStopped = true
         loadingIndicator.color = .white
         
+        transitionSnapshotView.contentMode = .scaleAspectFill
+        transitionSnapshotView.clipsToBounds = true
+        transitionSnapshotView.isHidden = true
+        transitionSnapshotView.alpha = 0
+        
         view.addSubview(cameraView)
+        view.addSubview(transitionSnapshotView)
         view.addSubview(statusLabel)
         view.addSubview(lensStatusLabel)
         view.addSubview(lensControl)
@@ -107,6 +118,11 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
             cameraView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             previewRatio,
             
+            transitionSnapshotView.topAnchor.constraint(equalTo: cameraView.topAnchor),
+            transitionSnapshotView.bottomAnchor.constraint(equalTo: cameraView.bottomAnchor),
+            transitionSnapshotView.leadingAnchor.constraint(equalTo: cameraView.leadingAnchor),
+            transitionSnapshotView.trailingAnchor.constraint(equalTo: cameraView.trailingAnchor),
+            
             lensControl.topAnchor.constraint(equalTo: cameraView.bottomAnchor, constant: 16),
             lensControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             lensControl.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
@@ -122,6 +138,10 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
             loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             loadingIndicator.centerYAnchor.constraint(equalTo: lensControl.centerYAnchor)
         ])
+        
+        cameraView.onFrameRendered = { [weak self] in
+            self?.handleCameraFrameRendered()
+        }
     }
     
     private func bindCameraState() {
@@ -217,7 +237,10 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
     
     @objc
     private func didTapSwitchButton() {
+        guard !isSwitchingCamera else { return }
+        isSwitchingCamera = true
         setLoading(true)
+        beginCameraSwitchTransition()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
@@ -226,22 +249,76 @@ public final class CMCameraPreviewDemoViewController: UIViewController {
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    UIView.transition(with: self.cameraView, duration: 0.3, options: [.transitionFlipFromLeft, .curveEaseInOut]) {
-                        self.cameraView.layoutIfNeeded()
-                    }
+                    self.isAwaitingFirstFrameAfterSwitch = true
                     UIView.animate(withDuration: 0.3) {
                         self.switchButton.transform = self.switchButton.transform.rotated(by: .pi)
                     }
                     self.refreshLensOptions()
                     self.refreshStatus()
+                    self.finishTransitionAfterTimeout()
                     
                 case .failure:
+                    self.finishCameraSwitchTransition()
                     self.refreshLensSelection()
+                    self.setLoading(false)
                 }
-                
-                self.setLoading(false)
+                self.isSwitchingCamera = false
             }
         }
+    }
+    
+    private func beginCameraSwitchTransition() {
+        guard cameraView.bounds.width > 0, cameraView.bounds.height > 0 else { return }
+        
+        let token = UUID()
+        switchTransitionToken = token
+        
+        let renderer = UIGraphicsImageRenderer(bounds: cameraView.bounds)
+        let image = renderer.image { _ in
+            cameraView.drawHierarchy(in: cameraView.bounds, afterScreenUpdates: false)
+        }
+        
+        transitionSnapshotView.image = image
+        transitionSnapshotView.isHidden = false
+        transitionSnapshotView.alpha = 1
+        transitionSnapshotView.transform = .identity
+        
+        UIView.animate(withDuration: 0.18) {
+            self.transitionSnapshotView.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
+            self.transitionSnapshotView.alpha = 0.92
+        }
+    }
+    
+    private func finishTransitionAfterTimeout() {
+        let token = switchTransitionToken
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+            guard let self else { return }
+            guard self.switchTransitionToken == token else { return }
+            guard self.isAwaitingFirstFrameAfterSwitch else { return }
+            self.finishCameraSwitchTransition()
+            self.isAwaitingFirstFrameAfterSwitch = false
+            self.setLoading(false)
+        }
+    }
+    
+    private func handleCameraFrameRendered() {
+        guard isAwaitingFirstFrameAfterSwitch else { return }
+        isAwaitingFirstFrameAfterSwitch = false
+        finishCameraSwitchTransition()
+        setLoading(false)
+    }
+    
+    private func finishCameraSwitchTransition() {
+        let token = switchTransitionToken
+        UIView.animate(withDuration: 0.22, animations: {
+            self.transitionSnapshotView.alpha = 0
+            self.transitionSnapshotView.transform = .identity
+        }, completion: { _ in
+            guard self.switchTransitionToken == token else { return }
+            self.transitionSnapshotView.isHidden = true
+            self.transitionSnapshotView.image = nil
+            self.switchTransitionToken = nil
+        })
     }
     
     private func setLoading(_ loading: Bool) {
