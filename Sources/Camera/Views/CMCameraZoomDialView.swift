@@ -554,10 +554,9 @@ private struct CMZoomSelectorRootView: View {
     
     private func progressForValue(_ value: CGFloat) -> CGFloat {
         let v = clamp(value)
-        let baseSpan01 = max(0.02, progressAt(1.0) - progressAt(0.5))
-        let baseSpan12 = solvedBaseSpan12(givenBaseSpan01: baseSpan01)
-        let p1 = baseSpan01
-        let p2 = min(0.96, p1 + baseSpan12)
+        let baseSpan = solvedFirstTwoSpan()
+        let p1 = baseSpan
+        let p2 = min(0.98, p1 + baseSpan)
         
         if v <= 1.0 {
             let t = (v - 0.5) / 0.5
@@ -568,7 +567,7 @@ private struct CMZoomSelectorRootView: View {
             return p1 + t * (p2 - p1)
         }
         
-        let spans = postTwoUnitSpans(startProgress: p2)
+        let spans = postTwoUnitSpans(startProgress: p2, baseSpan: baseSpan)
         let clamped = min(v, 10.0)
         let integerPart = Int(floor(clamped))
         let unitIndex = max(0, min(7, integerPart - 2))
@@ -580,10 +579,9 @@ private struct CMZoomSelectorRootView: View {
     
     private func valueForProgress(_ progress: CGFloat) -> CGFloat {
         let p = min(max(progress, 0), 1)
-        let baseSpan01 = max(0.02, progressAt(1.0) - progressAt(0.5))
-        let baseSpan12 = solvedBaseSpan12(givenBaseSpan01: baseSpan01)
-        let p1 = baseSpan01
-        let p2 = min(0.96, p1 + baseSpan12)
+        let baseSpan = solvedFirstTwoSpan()
+        let p1 = baseSpan
+        let p2 = min(0.98, p1 + baseSpan)
         
         if p <= p1 {
             let t = p1 > 0 ? p / p1 : 0
@@ -594,7 +592,7 @@ private struct CMZoomSelectorRootView: View {
             return 1.0 + t
         }
         
-        let spans = postTwoUnitSpans(startProgress: p2)
+        let spans = postTwoUnitSpans(startProgress: p2, baseSpan: baseSpan)
         var cursor = p2
         for idx in 0..<spans.count {
             let next = cursor + spans[idx]
@@ -607,54 +605,42 @@ private struct CMZoomSelectorRootView: View {
         return 10.0
     }
     
-    private func progressAt(_ value: CGFloat) -> CGFloat {
-        let anchorValues = state.configuration.anchorValues
-        let anchorProgress = state.configuration.anchorProgress
-        let v = min(max(value, state.minValue), state.maxValue)
-        guard anchorValues.count >= 2, anchorProgress.count == anchorValues.count else { return 0 }
-        
-        for idx in 0..<(anchorValues.count - 1) {
-            let v0 = anchorValues[idx]
-            let v1 = anchorValues[idx + 1]
-            guard v >= v0, v <= v1 else { continue }
-            let p0 = anchorProgress[idx]
-            let p1 = anchorProgress[idx + 1]
-            let t = (v - v0) / max(v1 - v0, 0.0001)
-            return p0 + t * (p1 - p0)
-        }
-        return v <= anchorValues[0] ? anchorProgress[0] : anchorProgress[anchorProgress.count - 1]
-    }
-    
-    private func postTwoUnitSpans(startProgress: CGFloat) -> [CGFloat] {
+    private func postTwoUnitSpans(startProgress: CGFloat, baseSpan: CGFloat) -> [CGFloat] {
         let remaining = max(0.0001, 1.0 - startProgress)
         let cfg = state.configuration
         
         var weights: [CGFloat] = []
-        let baseSpan12 = solvedBaseSpan12(givenBaseSpan01: max(0.02, progressAt(1.0) - progressAt(0.5)))
-        var w = max(0.0001, baseSpan12 * cfg.postTwoFirstUnitFactor)
+        var w = max(0.0001, baseSpan * cfg.postTwoFirstUnitFactor)
         for _ in 0..<8 {
             weights.append(w)
             w *= cfg.postTwoDecay
         }
-        let total = weights.reduce(0, +)
-        if total <= remaining {
-            return weights
-        }
+        
+        var spans = weights
+        let total = spans.reduce(0, +)
         let scale = remaining / max(total, 0.0001)
-        return weights.map { $0 * scale }
+        spans = spans.map { $0 * scale }
+        
+        // remove numeric drift so the last major tick can align exactly at 10.0
+        let diff = remaining - spans.reduce(0, +)
+        if let last = spans.indices.last {
+            spans[last] += diff
+        }
+        return spans
     }
     
-    private func solvedBaseSpan12(givenBaseSpan01: CGFloat) -> CGFloat {
+    private func solvedFirstTwoSpan() -> CGFloat {
         let cfg = state.configuration
         let f = cfg.postTwoFirstUnitFactor
         let r = cfg.postTwoDecay
         let n: CGFloat = 8
         let geometricSum = (1 - pow(r, n)) / max(1 - r, 0.0001)
         
-        // Ensure [1.0,2.0] is larger than [2.0,3.0] and the whole [2.0,10.0] fits.
-        let denominator = 1 + f * geometricSum
-        let solved = (1 - givenBaseSpan01) / max(denominator, 0.0001)
-        return max(0.03, min(0.6, solved))
+        // [0.5,1.0] and [1.0,2.0] are equal and largest.
+        // [2.0,3.0] starts smaller and then decays.
+        let denominator = 2 + f * geometricSum
+        let solved = 1 / max(denominator, 0.0001)
+        return max(0.06, min(0.45, solved))
     }
     
     private func snappedValue(_ value: CGFloat, threshold: CGFloat) -> CGFloat {
