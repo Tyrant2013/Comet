@@ -24,7 +24,7 @@ public struct CMCameraZoomDialConfiguration: Sendable, Equatable {
     
     public init(
         anchorValues: [CGFloat] = [0.5, 1.0, 2.0, 10.0],
-        anchorProgress: [CGFloat] = [0.0, 0.08, 0.18, 1.0],
+        anchorProgress: [CGFloat] = [0.0, 0.06, 0.12, 1.0],
         visibleProgressWindow: CGFloat = 0.56,
         horizontalInsetRatio: CGFloat = 0.09,
         minHorizontalInset: CGFloat = 24,
@@ -321,7 +321,7 @@ private struct CMZoomSelectorRootView: View {
                         path.addLine(to: tick.end)
                     }
                 }
-                .stroke(Color.white.opacity(0.72), lineWidth: 1.55)
+                .stroke(Color.white.opacity(0.72), lineWidth: 0.78)
                 
                 Path { path in
                     for tick in tickMarks(center: center, radius: radius, startAngle: start, endAngle: end).filter({ !$0.isMajor }) {
@@ -329,7 +329,7 @@ private struct CMZoomSelectorRootView: View {
                         path.addLine(to: tick.end)
                     }
                 }
-                .stroke(Color.white.opacity(0.30), lineWidth: 1.0)
+                .stroke(Color.white.opacity(0.30), lineWidth: 0.5)
                 
                 ForEach(majorLabelItems(center: center, radius: radius, startAngle: start, endAngle: end), id: \.id) { item in
                     VStack(spacing: 2) {
@@ -491,7 +491,7 @@ private struct CMZoomSelectorRootView: View {
             if angle >= startAngle && angle <= endAngle {
                 let rounded = round(v * 10)
                 let isMajor = Int(rounded) % 10 == 0 || abs(v - 0.5) < 0.05 || abs(v - 2.0) < 0.05
-                let innerOffset: CGFloat = isMajor ? 24 : 12
+                let innerOffset: CGFloat = isMajor ? 12 : 6
                 
                 let p1 = CGPoint(
                     x: center.x + cos(angle) * (radius - innerOffset),
@@ -554,21 +554,29 @@ private struct CMZoomSelectorRootView: View {
     
     private func progressForValue(_ value: CGFloat) -> CGFloat {
         let v = clamp(value)
-        let baseSpan = solvedFirstTwoSpan()
+        if v <= 0.5 { return 0 }
+        if v >= 10.0 { return 1 }
+        let baseSpan = configuredFirstTwoSpan()
         let p1 = baseSpan
         let p2 = min(0.98, p1 + baseSpan)
+        let firstSegmentEase: CGFloat = 1.4
+        let secondSegmentEase: CGFloat = 1.2
         
         if v <= 1.0 {
             let t = (v - 0.5) / 0.5
-            return min(max(t, 0), 1) * p1
+            let clampedT = min(max(t, 0), 1)
+            let eased = pow(clampedT, 1 / firstSegmentEase)
+            return eased * p1
         }
         if v <= 2.0 {
             let t = v - 1.0
-            return p1 + t * (p2 - p1)
+            let clampedT = min(max(t, 0), 1)
+            let eased = pow(clampedT, 1 / secondSegmentEase)
+            return p1 + eased * (p2 - p1)
         }
         
         let spans = postTwoUnitSpans(startProgress: p2, baseSpan: baseSpan)
-        let clamped = min(v, 10.0)
+        let clamped = min(v, 9.9999)
         let integerPart = Int(floor(clamped))
         let unitIndex = max(0, min(7, integerPart - 2))
         let fractional = clamped - CGFloat(integerPart)
@@ -579,17 +587,23 @@ private struct CMZoomSelectorRootView: View {
     
     private func valueForProgress(_ progress: CGFloat) -> CGFloat {
         let p = min(max(progress, 0), 1)
-        let baseSpan = solvedFirstTwoSpan()
+        if p <= 0 { return 0.5 }
+        if p >= 1 { return 10.0 }
+        let baseSpan = configuredFirstTwoSpan()
         let p1 = baseSpan
         let p2 = min(0.98, p1 + baseSpan)
+        let firstSegmentEase: CGFloat = 1.4
+        let secondSegmentEase: CGFloat = 1.2
         
         if p <= p1 {
             let t = p1 > 0 ? p / p1 : 0
-            return 0.5 + t * 0.5
+            let eased = pow(min(max(t, 0), 1), firstSegmentEase)
+            return 0.5 + eased * 0.5
         }
         if p <= p2 {
             let t = (p - p1) / max(p2 - p1, 0.0001)
-            return 1.0 + t
+            let eased = pow(min(max(t, 0), 1), secondSegmentEase)
+            return 1.0 + eased
         }
         
         let spans = postTwoUnitSpans(startProgress: p2, baseSpan: baseSpan)
@@ -629,26 +643,57 @@ private struct CMZoomSelectorRootView: View {
         return spans
     }
     
-    private func solvedFirstTwoSpan() -> CGFloat {
-        let cfg = state.configuration
-        let f = cfg.postTwoFirstUnitFactor
-        let r = cfg.postTwoDecay
-        let n: CGFloat = 8
-        let geometricSum = (1 - pow(r, n)) / max(1 - r, 0.0001)
+    private func configuredFirstTwoSpan() -> CGFloat {
+        let p05 = progressAtAnchor(0.5)
+        let p10 = progressAtAnchor(1.0)
+        let p20 = progressAtAnchor(2.0)
         
-        // [0.5,1.0] and [1.0,2.0] are equal and largest.
-        // [2.0,3.0] starts smaller and then decays.
-        let denominator = 2 + f * geometricSum
-        let solved = 1 / max(denominator, 0.0001)
-        return max(0.06, min(0.45, solved))
+        let span01 = max(0.01, p10 - p05)
+        let span12 = max(0.01, p20 - p10)
+        let base = min(span01, span12)
+        let compressed = base * 0.65
+        // keep both first segments equal and visibly tighter than before
+        return max(0.02, min(0.10, compressed))
+    }
+    
+    private func progressAtAnchor(_ value: CGFloat) -> CGFloat {
+        let anchorValues = state.configuration.anchorValues
+        let anchorProgress = state.configuration.anchorProgress
+        guard anchorValues.count >= 2, anchorValues.count == anchorProgress.count else { return 0 }
+        
+        let v = min(max(value, anchorValues.first ?? value), anchorValues.last ?? value)
+        for idx in 0..<(anchorValues.count - 1) {
+            let v0 = anchorValues[idx]
+            let v1 = anchorValues[idx + 1]
+            guard v >= v0, v <= v1 else { continue }
+            let p0 = anchorProgress[idx]
+            let p1 = anchorProgress[idx + 1]
+            let t = (v - v0) / max(v1 - v0, 0.0001)
+            return p0 + t * (p1 - p0)
+        }
+        return v <= anchorValues[0] ? anchorProgress[0] : anchorProgress[anchorProgress.count - 1]
     }
     
     private func snappedValue(_ value: CGFloat, threshold: CGFloat) -> CGFloat {
-        let candidates: [CGFloat] = [0.5, 1.0, 2.0]
         let clamped = clamp(value)
+        
+        // keep boundaries sticky to avoid 0.5<->1.0 and right-end bounce
+        if clamped <= state.minValue + max(0.08, threshold * 2.2) {
+            return state.minValue
+        }
+        if clamped >= state.maxValue - max(0.08, threshold * 2.2) {
+            return state.maxValue
+        }
+        
+        let candidates: [CGFloat] = [0.5, 1.0, 2.0]
         for target in candidates {
             guard target >= state.minValue, target <= state.maxValue else { continue }
-            if abs(clamped - target) <= threshold {
+            var effectiveThreshold = threshold
+            if abs(target - 1.0) < 0.001 && state.value <= state.minValue + 0.05 {
+                // when leaving 0.5, avoid instantly jumping to 1.0
+                effectiveThreshold = min(effectiveThreshold, 0.03)
+            }
+            if abs(clamped - target) <= effectiveThreshold {
                 return target
             }
         }
