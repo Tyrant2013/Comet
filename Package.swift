@@ -7,7 +7,6 @@ let package = Package(
     name: "Comet",
     platforms: [.iOS(.v14)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "Comet",
             targets: ["Comet"]),
@@ -15,14 +14,23 @@ let package = Package(
         .library(
             name: "Camera",
             targets: ["Camera"]),
+        // 图片编辑相关功能
+        .library(
+            name: "PhotoEditor",
+            targets: ["PhotoEditor"]),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "Comet", dependencies: ["Camera"]),
+            name: "Comet", dependencies: ["Camera", "PhotoEditor"]),
         .target(
-            name: "Camera", path: "Sources/Camera"),
+            name: "Camera", dependencies: ["PhotoEditor"], path: "Sources/Camera"),
+        .target(
+            name: "PhotoEditor", path: "Sources/PhotoEditor"),
+        .testTarget(
+            name: "PhotoEditorTests",
+            dependencies: ["PhotoEditor"],
+            path: "Tests/PhotoEditorTests"
+        ),
     ],
     swiftLanguageModes: [.v5]
 )
