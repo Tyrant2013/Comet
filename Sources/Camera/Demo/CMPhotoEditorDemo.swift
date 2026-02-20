@@ -39,6 +39,9 @@ public struct CMPhotoEditorDemo: View {
     @State private var mosaicWidth: CGFloat = 0.4
     @State private var mosaicHeight: CGFloat = 0.2
 
+    @State private var saveMessage: String?
+    @State private var isSaving: Bool = false
+
     private let renderContext = CIContext(options: nil)
 
     public init() {}
@@ -90,6 +93,11 @@ public struct CMPhotoEditorDemo: View {
                 Text(errorMessage)
                     .font(.caption)
                     .foregroundColor(.red)
+            }
+            if let saveMessage {
+                Text(saveMessage)
+                    .font(.caption)
+                    .foregroundColor(.green)
             }
         }
     }
@@ -154,6 +162,13 @@ public struct CMPhotoEditorDemo: View {
                         .background(Color.gray.opacity(0.2))
                         .foregroundColor(.primary)
                         .cornerRadius(8)
+                    Button(isSaving ? "保存中..." : "保存到相册") { saveToPhotoLibrary() }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.green)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .disabled(isSaving)
                 }
             }
             .onChange(of: brightness) { _ in applyAllEdits() }
@@ -334,6 +349,30 @@ public struct CMPhotoEditorDemo: View {
         let extent = image.extent.integral
         guard let cg = renderContext.createCGImage(image, from: extent) else { return nil }
         return UIImage(cgImage: cg)
+    }
+
+    private func saveToPhotoLibrary() {
+        guard let ciImage = ciImage(from: previewImage) else {
+            saveMessage = "无法保存图片"
+            return
+        }
+
+        isSaving = true
+        saveMessage = nil
+
+        CMPhotoEditorSave.saveToPhotoLibrary(ciImage) { result in
+            isSaving = false
+
+            switch result {
+            case .success:
+                saveMessage = "保存成功"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    saveMessage = nil
+                }
+            case .failure(let error):
+                saveMessage = "保存失败: \(error.errorDescription ?? "未知错误")"
+            }
+        }
     }
 
     private static func makeSampleImage() -> UIImage {
