@@ -21,4 +21,19 @@ public enum CMPhotoEditorFilter: Sendable {
             "CIPhotoEffectInstant"
         }
     }
+
+    var metalFilterType: UInt32 {
+        switch self {
+        case .none:
+            0
+        case .noir:
+            3
+        case .chrome:
+            4
+        case .mono:
+            1
+        case .instant:
+            5
+        }
+    }
 }

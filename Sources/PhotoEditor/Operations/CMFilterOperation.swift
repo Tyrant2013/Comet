@@ -4,17 +4,19 @@ import CoreImage
 public struct CMFilterOperation: CMPhotoEditOperation {
     public let id = "filter"
     public let filter: CMPhotoEditorFilter
+    private let metalProcessor: CMPhotoEditorMetalFilterProcessor?
 
     public init(filter: CMPhotoEditorFilter) {
         self.filter = filter
+        self.metalProcessor = CMPhotoEditorMetalFilterProcessor.shared
     }
 
     public func apply(to context: inout CMPhotoEditContext) throws {
-        guard let filterName = filter.coreImageName else { return }
-        guard let ciFilter = CIFilter(name: filterName) else { return }
-        ciFilter.setValue(context.image, forKey: kCIInputImageKey)
-        if let output = ciFilter.outputImage {
-            context.image = output.cropped(to: context.image.extent)
+        let filterType = filter.metalFilterType
+        guard filterType > 0 else { return }
+
+        if let outputImage = metalProcessor?.applyFilter(to: context.image, filterType: filterType) {
+            context.image = outputImage.cropped(to: context.image.extent)
         }
     }
 }
