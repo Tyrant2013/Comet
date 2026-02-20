@@ -7,7 +7,7 @@ import PhotoEditor
 
 public struct CMPhotoEditorDemo: View {
     @State private var sourceImage: UIImage = Self.makeSampleImage()
-    @State private var previewImage: UIImage = Self.makeSampleImage()
+    @State private var previewCIImage: CIImage?
     @State private var errorMessage: String?
     @State private var showPicker = false
 
@@ -41,8 +41,6 @@ public struct CMPhotoEditorDemo: View {
 
     @State private var saveMessage: String?
     @State private var isSaving: Bool = false
-
-    private let renderContext = CIContext(options: nil)
 
     public init() {}
 
@@ -81,9 +79,7 @@ public struct CMPhotoEditorDemo: View {
 
     private var imagePreview: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Image(uiImage: previewImage)
-                .resizable()
-                .scaledToFit()
+            CMPhotoEditorMetalView(image: previewCIImage)
                 .frame(maxWidth: .infinity)
                 .frame(height: 280)
                 .background(Color.black.opacity(0.9))
@@ -291,13 +287,8 @@ public struct CMPhotoEditorDemo: View {
 
         do {
             let output = try PhotoEditor.CMPhotoEditor.edit(ciInput, operations: operations)
-            if let uiImage = makeUIImage(from: output) {
-                previewImage = uiImage
-                errorMessage = nil
-            }
-            else {
-                errorMessage = "渲染结果失败"
-            }
+            previewCIImage = output
+            errorMessage = nil
         }
         catch {
             errorMessage = "编辑失败: \(error.localizedDescription)"
@@ -345,14 +336,8 @@ public struct CMPhotoEditorDemo: View {
         return nil
     }
 
-    private func makeUIImage(from image: CIImage) -> UIImage? {
-        let extent = image.extent.integral
-        guard let cg = renderContext.createCGImage(image, from: extent) else { return nil }
-        return UIImage(cgImage: cg)
-    }
-
     private func saveToPhotoLibrary() {
-        guard let ciImage = ciImage(from: previewImage) else {
+        guard let ciImage = previewCIImage else {
             saveMessage = "无法保存图片"
             return
         }
