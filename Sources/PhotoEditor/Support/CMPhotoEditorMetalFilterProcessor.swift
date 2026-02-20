@@ -47,10 +47,10 @@ public final class CMPhotoEditorMetalFilterProcessor {
         self.textureCache = textureCache
 
         let vertices: [Float] = [
-            -1, -1, 0, 1, 1, 0,
+            -1, -1, 0, 1, 0, 1,
             -1,  1, 0, 1, 0, 0,
              1, -1, 0, 1, 1, 1,
-             1,  1, 0, 1, 0, 1
+             1,  1, 0, 1, 1, 0
         ]
         
         fullscreenVertexBuffer = device.makeBuffer(
@@ -95,8 +95,8 @@ public final class CMPhotoEditorMetalFilterProcessor {
         ciContext = CIContext(mtlDevice: device)
     }
 
-    public func applyFilter(to image: CIImage, filterType: UInt32) -> CIImage? {
-        guard filterType > 0 else { return image }
+    public func applyFilter(to image: CIImage, filterType: UInt32) -> CVPixelBuffer? {
+        guard filterType > 0 else { return nil }
 
         let extent = image.extent
         let width = Int(extent.width)
@@ -155,7 +155,7 @@ public final class CMPhotoEditorMetalFilterProcessor {
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
 
-        return CIImage(cvPixelBuffer: outputPixelBuffer).transformed(by: CGAffineTransform(translationX: extent.origin.x, y: extent.origin.y))
+        return outputPixelBuffer
     }
 
     private func createTexture(from pixelBuffer: CVPixelBuffer) -> MTLTexture? {

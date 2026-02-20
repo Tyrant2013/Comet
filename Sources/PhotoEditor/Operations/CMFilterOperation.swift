@@ -1,5 +1,6 @@
 import Foundation
 import CoreImage
+import AVFoundation
 
 public struct CMFilterOperation: CMPhotoEditOperation {
     public let id = "filter"
@@ -15,7 +16,8 @@ public struct CMFilterOperation: CMPhotoEditOperation {
         let filterType = filter.metalFilterType
         guard filterType > 0 else { return }
 
-        if let outputImage = metalProcessor?.applyFilter(to: context.image, filterType: filterType) {
+        if let outputPixelBuffer = metalProcessor?.applyFilter(to: context.image, filterType: filterType) {
+            let outputImage = CIImage(cvPixelBuffer: outputPixelBuffer)
             context.image = outputImage.cropped(to: context.image.extent)
         }
     }
