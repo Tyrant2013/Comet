@@ -87,7 +87,6 @@ float3 applyChrome(float3 color, float intensity) {
 
 float3 applyInstant(float3 color, float intensity) {
     float3 orange = float3(1.0, 0.6, 0.2);
-    float3 blue = float3(0.2, 0.4, 0.8);
     float luma = dot(color, float3(0.299, 0.587, 0.114));
     float3 warm = color + orange * (1.0 - luma) * 0.3;
     float3 faded = mix(warm, float3(0.95, 0.92, 0.85), 0.15);
