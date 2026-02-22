@@ -125,7 +125,7 @@ class CMPhotoEditorMetalRenderer: NSObject {
     
     private func calculateScaledToFitTexCoords(imageAspectRatio: Float, viewAspectRatio: Float) -> (minX: Float, minY: Float, maxX: Float, maxY: Float) {
         if imageAspectRatio > viewAspectRatio {
-            let texHeight = 1.0 / imageAspectRatio * viewAspectRatio
+            let texHeight = viewAspectRatio / imageAspectRatio
             let offset = (1.0 - texHeight) / 2.0
             return (minX: 0, minY: offset, maxX: 1, maxY: 1.0 - offset)
         } else {
@@ -141,7 +141,7 @@ class CMPhotoEditorMetalRenderer: NSObject {
             let offset = (texWidth - 1.0) / 2.0
             return (minX: -offset, minY: 0, maxX: 1.0 + offset, maxY: 1)
         } else {
-            let texHeight = 1.0 / imageAspectRatio * viewAspectRatio
+            let texHeight = viewAspectRatio / imageAspectRatio
             let offset = (texHeight - 1.0) / 2.0
             return (minX: 0, minY: -offset, maxX: 1, maxY: 1.0 + offset)
         }

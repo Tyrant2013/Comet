@@ -19,7 +19,7 @@ public class CMPhotoEditorMTKView: UIView {
         }
     }
     
-    public var imageContentMode: CMPhotoEditorContentMode = .scaleAspectFill {
+    public var imageContentMode: CMPhotoEditorContentMode = .scaleAspectFit {
         didSet {
             renderer.contentMode = imageContentMode
             metalView.setNeedsDisplay()
