@@ -10,6 +10,7 @@ public struct CMPhotoEditorDemo: View {
     @State private var previewCIImage: CIImage?
     @State private var errorMessage: String?
     @State private var showPicker = false
+    @State private var imageContentMode: CMPhotoEditorContentMode = .scaleAspectFit
 
     @State private var brightness: Double = 0
     @State private var contrast: Double = 1
@@ -79,7 +80,7 @@ public struct CMPhotoEditorDemo: View {
 
     private var imagePreview: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CMPhotoEditorMetalView(image: previewCIImage)
+            CMPhotoEditorMetalView(image: previewCIImage, imageContentMode: imageContentMode)
                 .frame(maxWidth: .infinity)
                 .frame(height: 280)
                 .background(Color.black.opacity(0.9))
@@ -101,6 +102,13 @@ public struct CMPhotoEditorDemo: View {
     private var controls: some View {
         ScrollView {
             VStack(spacing: 14) {
+                sectionHeader("显示模式")
+                Picker("Content Mode", selection: $imageContentMode) {
+                    Text("Fit").tag(CMPhotoEditorContentMode.scaleAspectFit)
+                    Text("Fill").tag(CMPhotoEditorContentMode.scaleAspectFill)
+                }
+                .pickerStyle(.segmented)
+
                 sectionHeader("调色")
                 sliderRow("Brightness", value: $brightness, range: -1...1)
                 sliderRow("Contrast", value: $contrast, range: 0.5...2)

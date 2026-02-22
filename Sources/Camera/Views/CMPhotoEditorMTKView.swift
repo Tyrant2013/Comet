@@ -3,6 +3,11 @@ import UIKit
 import MetalKit
 import CoreImage
 
+public enum CMPhotoEditorContentMode {
+    case scaleAspectFit
+    case scaleAspectFill
+}
+
 public class CMPhotoEditorMTKView: UIView {
     private let metalView: MTKView
     private let renderer: CMPhotoEditorMetalRenderer
@@ -10,6 +15,13 @@ public class CMPhotoEditorMTKView: UIView {
     public var image: CIImage? {
         didSet {
             renderer.update(image: image ?? CIImage())
+            metalView.setNeedsDisplay()
+        }
+    }
+    
+    public var imageContentMode: CMPhotoEditorContentMode = .scaleAspectFill {
+        didSet {
+            renderer.contentMode = imageContentMode
             metalView.setNeedsDisplay()
         }
     }

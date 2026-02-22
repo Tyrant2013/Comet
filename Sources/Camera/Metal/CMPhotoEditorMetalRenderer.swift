@@ -12,6 +12,7 @@ class CMPhotoEditorMetalRenderer: NSObject {
     private let pipelineState: MTLRenderPipelineState
     private var textureCache: CVMetalTextureCache?
     private let ciContext: CIContext
+    var contentMode: CMPhotoEditorContentMode = .scaleAspectFit
     
     init(device: MTLDevice) {
         self.device = device
@@ -91,7 +92,7 @@ class CMPhotoEditorMetalRenderer: NSObject {
         }
         
         let viewAspectRatio = Float(drawable.texture.width) / Float(drawable.texture.height)
-        let texCoords = calculateScaledToFitTexCoords(imageAspectRatio: currentImageAspectRatio, viewAspectRatio: viewAspectRatio)
+        let texCoords = calculateTexCoords(imageAspectRatio: currentImageAspectRatio, viewAspectRatio: viewAspectRatio, contentMode: contentMode)
         
         guard let commandBuffer = commandQueue.makeCommandBuffer(),
               let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
@@ -113,6 +114,15 @@ class CMPhotoEditorMetalRenderer: NSObject {
         commandBuffer.commit()
     }
     
+    private func calculateTexCoords(imageAspectRatio: Float, viewAspectRatio: Float, contentMode: CMPhotoEditorContentMode) -> (minX: Float, minY: Float, maxX: Float, maxY: Float) {
+        switch contentMode {
+        case .scaleAspectFit:
+            return calculateScaledToFitTexCoords(imageAspectRatio: imageAspectRatio, viewAspectRatio: viewAspectRatio)
+        case .scaleAspectFill:
+            return calculateScaledToFillTexCoords(imageAspectRatio: imageAspectRatio, viewAspectRatio: viewAspectRatio)
+        }
+    }
+    
     private func calculateScaledToFitTexCoords(imageAspectRatio: Float, viewAspectRatio: Float) -> (minX: Float, minY: Float, maxX: Float, maxY: Float) {
         if imageAspectRatio > viewAspectRatio {
             let texHeight = 1.0 / imageAspectRatio * viewAspectRatio
@@ -122,6 +132,18 @@ class CMPhotoEditorMetalRenderer: NSObject {
             let texWidth = imageAspectRatio / viewAspectRatio
             let offset = (1.0 - texWidth) / 2.0
             return (minX: offset, minY: 0, maxX: 1.0 - offset, maxY: 1)
+        }
+    }
+    
+    private func calculateScaledToFillTexCoords(imageAspectRatio: Float, viewAspectRatio: Float) -> (minX: Float, minY: Float, maxX: Float, maxY: Float) {
+        if imageAspectRatio > viewAspectRatio {
+            let texWidth = imageAspectRatio / viewAspectRatio
+            let offset = (texWidth - 1.0) / 2.0
+            return (minX: -offset, minY: 0, maxX: 1.0 + offset, maxY: 1)
+        } else {
+            let texHeight = 1.0 / imageAspectRatio * viewAspectRatio
+            let offset = (texHeight - 1.0) / 2.0
+            return (minX: 0, minY: -offset, maxX: 1, maxY: 1.0 + offset)
         }
     }
     
