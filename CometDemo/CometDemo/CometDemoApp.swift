@@ -12,8 +12,18 @@ import Camera
 struct CometDemoApp: App {
     var body: some Scene {
         WindowGroup {
-            CMCameraPreviewDemo()
-                .ignoresSafeArea()
+            TabView {
+                CMCameraPreviewDemo()
+                    .ignoresSafeArea()
+                    .tabItem {
+                        Label("Camera", systemImage: "camera")
+                    }
+
+                CMPhotoEditorDemo()
+                    .tabItem {
+                        Label("PhotoEditor", systemImage: "slider.horizontal.3")
+                    }
+            }
         }
     }
 }
