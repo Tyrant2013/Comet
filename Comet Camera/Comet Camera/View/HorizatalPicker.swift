@@ -13,12 +13,11 @@ struct CenterSelectGaugeView: View {
     let gaugeHeight: CGFloat = 150
     let centerY: CGFloat = 80
     
-    // 手势状态 - 使用更稳定的状态管理
+    // 手势状态
     @State private var isDragging: Bool = false
     @State private var dragStartLocation: CGFloat = 0
     @State private var dragStartOffset: CGFloat = 0
     
-    // 当前刻度偏移（0.5刻度距离中心的距离）
     @State private var currentOffset: CGFloat = 0
     
     var body: some View {
@@ -49,7 +48,6 @@ struct CenterSelectGaugeView: View {
                     let allTicks = calculateAllTicks()
                     
                     ZStack {
-                        // 渲染刻度
                         ForEach(allTicks.indices, id: \.self) { i in
                             let tick = allTicks[i]
                             let tickX = centerX + tick.offset - currentOffset
@@ -86,21 +84,17 @@ struct CenterSelectGaugeView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.gray.opacity(0.3), lineWidth: 1)
             )
-            // 使用更底层的手势处理
             .gesture(
                 DragGesture(minimumDistance: 0, coordinateSpace: .local)
                     .onChanged { gesture in
                         if !isDragging {
-                            // 开始拖动
                             isDragging = true
                             dragStartLocation = gesture.location.x
                             dragStartOffset = currentOffset
                         } else {
-                            // 拖动中 - 计算相对于起始点的位移
                             let delta = gesture.location.x - dragStartLocation
                             let newOffset = dragStartOffset - delta
                             
-                            // 限制范围
                             let maxOffset = valueToOffset(maxValue)
                             let clampedOffset = max(0, min(newOffset, maxOffset))
                             
@@ -110,7 +104,6 @@ struct CenterSelectGaugeView: View {
                     }
                     .onEnded { _ in
                         isDragging = false
-                        // 吸附
                         withAnimation(.easeOut(duration: 0.15)) {
                             snapToNearest()
                         }
@@ -135,7 +128,8 @@ struct CenterSelectGaugeView: View {
     
     // MARK: - 刻度数据
     
-    struct TickData {
+    struct TickData: Identifiable {
+        let id = UUID()
         let value: Double
         let offset: CGFloat
         let isMajor: Bool
@@ -143,54 +137,62 @@ struct CenterSelectGaugeView: View {
     
     func calculateAllTicks() -> [TickData] {
         var result: [TickData] = []
-        let baseUnit: CGFloat = 80 // 增大基础单位，让拖动距离更长
-        
-        var currentPos: CGFloat = 0
+        let baseUnit: CGFloat = 80
         
         // 0.5
         result.append(TickData(value: 0.5, offset: 0, isMajor: true))
         
+        var currentPos: CGFloat = 0
+        
         // 0.5 -> 1.0
+        let width_0_5_to_1 = baseUnit * 0.5 / 0.5 // 0.5单位长度，但占满baseUnit
+        // 实际上0.5->1.0是0.5的数值跨度，我们让它占baseUnit宽度
         let width1 = baseUnit
+        
+        // 小刻度 0.5-1.0
         for j in 1...5 {
             let ratio = CGFloat(j) / 6.0
             let val = 0.5 + 0.5 * Double(ratio)
             result.append(TickData(value: val, offset: width1 * ratio, isMajor: false))
         }
+        
         currentPos += width1
+        // 1.0
         result.append(TickData(value: 1.0, offset: currentPos, isMajor: true))
         
-        // 1.0 -> 2.0
+        // 1.0 -> 2.0 (同宽度)
         for j in 1...5 {
             let ratio = CGFloat(j) / 6.0
             let val = 1.0 + 1.0 * Double(ratio)
             result.append(TickData(value: val, offset: currentPos + width1 * ratio, isMajor: false))
         }
+        
         currentPos += width1
+        // 2.0
         result.append(TickData(value: 2.0, offset: currentPos, isMajor: true))
         
         // 2.0 -> 10.0 (80%递减)
         var prevWidth = width1
-        var lastMajorValue = 2.0
         var lastMajorPos = currentPos
         
-        for i in 2..<majorTicks.count {
+        for i in 2..<majorTicks.count - 1 { // 注意：到count-1，避免越界
             let newWidth = prevWidth * 0.8
-            let nextMajorValue = majorTicks[i]
-            let step = nextMajorValue - lastMajorValue
+            let currentMajor = majorTicks[i]
+            let nextMajor = majorTicks[i + 1]
             
+            // 小刻度
             for j in 1...5 {
                 let ratio = Double(j) / 6.0
-                let val = lastMajorValue + step * ratio
+                let val = currentMajor + (nextMajor - currentMajor) * ratio
                 let pos = lastMajorPos + newWidth * CGFloat(ratio)
                 result.append(TickData(value: val, offset: pos, isMajor: false))
             }
             
             lastMajorPos += newWidth
-            result.append(TickData(value: nextMajorValue, offset: lastMajorPos, isMajor: true))
+            // 下一个大刻度
+            result.append(TickData(value: nextMajor, offset: lastMajorPos, isMajor: true))
             
             prevWidth = newWidth
-            lastMajorValue = nextMajorValue
         }
         
         return result
