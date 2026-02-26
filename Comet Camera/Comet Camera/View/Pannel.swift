@@ -2,7 +2,7 @@
 //  Pannel.swift
 //  Comet Camera
 //
-//  Created by 桃园谷 on 2026/2/25.
+//  Created by zhuangxiaowei on 2026/2/25.
 //
 
 import SwiftUI
