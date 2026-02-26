@@ -20,6 +20,11 @@ struct CenterSelectGaugeView: View {
     
     @State private var currentOffset: CGFloat = 0
     
+    // 缓存刻度数据避免重复计算
+    private var allTicksCache: [TickData] {
+        calculateAllTicks()
+    }
+    
     var body: some View {
         VStack(spacing: 30) {
             ZStack {
@@ -45,7 +50,7 @@ struct CenterSelectGaugeView: View {
                 // 刻度层
                 GeometryReader { geo in
                     let centerX = geo.size.width / 2
-                    let allTicks = calculateAllTicks()
+                    let allTicks = allTicksCache
                     
                     ZStack {
                         ForEach(allTicks.indices, id: \.self) { i in
@@ -105,7 +110,7 @@ struct CenterSelectGaugeView: View {
                     .onEnded { _ in
                         isDragging = false
                         withAnimation(.easeOut(duration: 0.15)) {
-                            snapToNearest()
+                            snapToNearestTick()
                         }
                     }
             )
@@ -143,13 +148,9 @@ struct CenterSelectGaugeView: View {
         result.append(TickData(value: 0.5, offset: 0, isMajor: true))
         
         var currentPos: CGFloat = 0
-        
-        // 0.5 -> 1.0
-        let width_0_5_to_1 = baseUnit * 0.5 / 0.5 // 0.5单位长度，但占满baseUnit
-        // 实际上0.5->1.0是0.5的数值跨度，我们让它占baseUnit宽度
         let width1 = baseUnit
         
-        // 小刻度 0.5-1.0
+        // 0.5 -> 1.0 的小刻度
         for j in 1...5 {
             let ratio = CGFloat(j) / 6.0
             let val = 0.5 + 0.5 * Double(ratio)
@@ -160,7 +161,7 @@ struct CenterSelectGaugeView: View {
         // 1.0
         result.append(TickData(value: 1.0, offset: currentPos, isMajor: true))
         
-        // 1.0 -> 2.0 (同宽度)
+        // 1.0 -> 2.0 的小刻度
         for j in 1...5 {
             let ratio = CGFloat(j) / 6.0
             let val = 1.0 + 1.0 * Double(ratio)
@@ -175,7 +176,7 @@ struct CenterSelectGaugeView: View {
         var prevWidth = width1
         var lastMajorPos = currentPos
         
-        for i in 2..<majorTicks.count - 1 { // 注意：到count-1，避免越界
+        for i in 2..<majorTicks.count - 1 {
             let newWidth = prevWidth * 0.8
             let currentMajor = majorTicks[i]
             let nextMajor = majorTicks[i + 1]
@@ -201,7 +202,7 @@ struct CenterSelectGaugeView: View {
     // MARK: - 转换函数
     
     func valueToOffset(_ value: Double) -> CGFloat {
-        let ticks = calculateAllTicks()
+        let ticks = allTicksCache
         
         if value <= 0.5 { return 0 }
         if value >= 10.0 { return ticks.last?.offset ?? 0 }
@@ -218,7 +219,7 @@ struct CenterSelectGaugeView: View {
     }
     
     func offsetToValue(_ offset: CGFloat) -> Double {
-        let ticks = calculateAllTicks()
+        let ticks = allTicksCache
         
         if offset <= 0 { return 0.5 }
         
@@ -233,13 +234,28 @@ struct CenterSelectGaugeView: View {
         return 10.0
     }
     
-    func snapToNearest() {
-        let step = 0.5
-        let snapped = round((currentValue - 0.5) / step) * step + 0.5
-        let clamped = min(max(snapped, 0.5), 10.0)
+    // MARK: - 吸附到最近的刻度（包括小刻度）
+    func snapToNearestTick() {
+        let ticks = allTicksCache
+        let currentVal = currentValue
         
-        currentValue = clamped
-        currentOffset = valueToOffset(clamped)
+        // 找到最近的刻度值
+        var nearestValue = ticks[0].value
+        var minDistance = abs(currentVal - nearestValue)
+        
+        for tick in ticks {
+            let distance = abs(currentVal - tick.value)
+            if distance < minDistance {
+                minDistance = distance
+                nearestValue = tick.value
+            }
+        }
+        
+        // 限制范围
+        nearestValue = min(max(nearestValue, minValue), maxValue)
+        
+        currentValue = nearestValue
+        currentOffset = valueToOffset(nearestValue)
     }
 }
 
