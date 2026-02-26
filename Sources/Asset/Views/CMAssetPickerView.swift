@@ -140,7 +140,7 @@ struct CMAssetPickerView: View {
             if showPreview {
                 HeroAnimationContainer(isVisible: $showPreview) {
                     CMAssetPreviewView(
-                        assets: assets,
+                        assets: $assets,
                         initialIndex: previewIndex,
                         selectedAssets: $selectedAssets,
                         isMultiSelect: isMultiSelect,
