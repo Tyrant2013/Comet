@@ -18,14 +18,20 @@ let package = Package(
         .library(
             name: "PhotoEditor",
             targets: ["PhotoEditor"]),
+        // 相册访问功能
+        .library(
+            name: "Asset",
+            targets: ["Asset"]),
     ],
     targets: [
         .target(
-            name: "Comet", dependencies: ["Camera", "PhotoEditor"]),
+            name: "Comet", dependencies: ["Camera", "PhotoEditor", "Asset"]),
         .target(
             name: "Camera", dependencies: ["PhotoEditor"], path: "Sources/Camera"),
         .target(
             name: "PhotoEditor", path: "Sources/PhotoEditor"),
+        .target(
+            name: "Asset", dependencies: ["PhotoEditor"], path: "Sources/Asset"),
         .testTarget(
             name: "PhotoEditorTests",
             dependencies: ["PhotoEditor"],
