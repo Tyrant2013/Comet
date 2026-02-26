@@ -20,9 +20,12 @@ struct CenterSelectGaugeView: View {
     
     @State private var currentOffset: CGFloat = 0
     
-    // 缓存刻度数据避免重复计算
-    private var allTicksCache: [TickData] {
-        calculateAllTicks()
+    // 步进值
+    let step: Double = 0.1
+    
+    // 总刻度宽度
+    private var totalTicksWidth: CGFloat {
+        return visibleWidth
     }
     
     var body: some View {
@@ -55,14 +58,14 @@ struct CenterSelectGaugeView: View {
                     ZStack {
                         ForEach(allTicks.indices, id: \.self) { i in
                             let tick = allTicks[i]
-                            let tickX = centerX + tick.offset - currentOffset
+                            let displayX = centerX + (tick.offset - currentOffset) * totalTicksWidth
                             
-                            if abs(tickX - centerX) < visibleWidth / 2 + 30 {
+                            if abs(displayX - centerX) < visibleWidth / 2 + 20 {
                                 TickItem(
                                     tick: tick,
-                                    x: tickX,
+                                    x: displayX,
                                     y: centerY,
-                                    distanceFromCenter: abs(tickX - centerX),
+                                    distanceFromCenter: abs(displayX - centerX),
                                     maxVisibleDistance: visibleWidth / 2
                                 )
                             }
@@ -97,27 +100,29 @@ struct CenterSelectGaugeView: View {
                             dragStartLocation = gesture.location.x
                             dragStartOffset = currentOffset
                         } else {
-                            let delta = gesture.location.x - dragStartLocation
-                            let newOffset = dragStartOffset - delta
+                            let delta = (gesture.location.x - dragStartLocation) / totalTicksWidth
+                            var newOffset = dragStartOffset - delta
+                            newOffset = max(0, min(newOffset, 1))
                             
-                            let maxOffset = valueToOffset(maxValue)
-                            let clampedOffset = max(0, min(newOffset, maxOffset))
+                            currentOffset = newOffset
                             
-                            currentOffset = clampedOffset
-                            currentValue = offsetToValue(currentOffset)
+                            // 转换为值并量化到0.1
+                            let rawValue = offsetToValue(currentOffset)
+                            currentValue = round(rawValue * 10) / 10
                         }
                     }
                     .onEnded { _ in
                         isDragging = false
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            snapToNearestTick()
-                        }
+                        // 吸附到最近的0.1
+                        let snapped = round(currentValue * 10) / 10
+                        currentValue = min(max(snapped, minValue), maxValue)
+                        currentOffset = valueToOffset(currentValue)
                     }
             )
             
             // 数值显示
             VStack(spacing: 8) {
-                Text(String(format: "%.2f", currentValue))
+                Text(String(format: "%.1f", currentValue))
                     .font(.system(size: 44, weight: .bold, design: .rounded))
                     .monospacedDigit()
                 
@@ -128,6 +133,7 @@ struct CenterSelectGaugeView: View {
         }
         .onAppear {
             currentOffset = 0
+            currentValue = 0.5
         }
     }
     
@@ -140,122 +146,115 @@ struct CenterSelectGaugeView: View {
         let isMajor: Bool
     }
     
+    private var allTicksCache: [TickData] {
+        calculateAllTicks()
+    }
+    
     func calculateAllTicks() -> [TickData] {
         var result: [TickData] = []
-        let baseUnit: CGFloat = 80
+        let weights = calculateWeights()
+        
+        var currentNormalizedPos: CGFloat = 0
         
         // 0.5
         result.append(TickData(value: 0.5, offset: 0, isMajor: true))
         
-        var currentPos: CGFloat = 0
-        let width1 = baseUnit
-        
-        // 0.5 -> 1.0 的小刻度
-        for j in 1...5 {
-            let ratio = CGFloat(j) / 6.0
-            let val = 0.5 + 0.5 * Double(ratio)
-            result.append(TickData(value: val, offset: width1 * ratio, isMajor: false))
+        // 0.5 -> 1.0 (步进0.1：0.6, 0.7, 0.8, 0.9)
+        let weight_0_5_1 = weights[0]
+        for i in 1...4 {
+            let val = 0.5 + Double(i) * 0.1
+            let pos = currentNormalizedPos + weight_0_5_1 * CGFloat(i) / 5.0
+            result.append(TickData(value: val, offset: pos, isMajor: false))
         }
+        currentNormalizedPos += weight_0_5_1
+        result.append(TickData(value: 1.0, offset: currentNormalizedPos, isMajor: true))
         
-        currentPos += width1
-        // 1.0
-        result.append(TickData(value: 1.0, offset: currentPos, isMajor: true))
-        
-        // 1.0 -> 2.0 的小刻度
-        for j in 1...5 {
-            let ratio = CGFloat(j) / 6.0
-            let val = 1.0 + 1.0 * Double(ratio)
-            result.append(TickData(value: val, offset: currentPos + width1 * ratio, isMajor: false))
+        // 1.0 -> 2.0 (步进0.2显示：1.2, 1.4, 1.6, 1.8)
+        let weight_1_2 = weights[1]
+        for i in 1...4 {
+            let val = 1.0 + Double(i) * 0.2
+            let pos = currentNormalizedPos + weight_1_2 * CGFloat(i) / 5.0
+            result.append(TickData(value: val, offset: pos, isMajor: false))
         }
+        currentNormalizedPos += weight_1_2
+        result.append(TickData(value: 2.0, offset: currentNormalizedPos, isMajor: true))
         
-        currentPos += width1
-        // 2.0
-        result.append(TickData(value: 2.0, offset: currentPos, isMajor: true))
-        
-        // 2.0 -> 10.0 (80%递减)
-        var prevWidth = width1
-        var lastMajorPos = currentPos
-        
-        for i in 2..<majorTicks.count - 1 {
-            let newWidth = prevWidth * 0.8
-            let currentMajor = majorTicks[i]
-            let nextMajor = majorTicks[i + 1]
+        // 2.0 -> 10.0
+        for idx in 2..<majorTicks.count - 1 {
+            let weight = weights[idx]
+            let startVal = majorTicks[idx]
             
-            // 小刻度
-            for j in 1...5 {
-                let ratio = Double(j) / 6.0
-                let val = currentMajor + (nextMajor - currentMajor) * ratio
-                let pos = lastMajorPos + newWidth * CGFloat(ratio)
+            for i in 1...4 {
+                let val = startVal + Double(i) * 0.2
+                let pos = currentNormalizedPos + weight * CGFloat(i) / 5.0
                 result.append(TickData(value: val, offset: pos, isMajor: false))
             }
             
-            lastMajorPos += newWidth
-            // 下一个大刻度
-            result.append(TickData(value: nextMajor, offset: lastMajorPos, isMajor: true))
-            
-            prevWidth = newWidth
+            currentNormalizedPos += weight
+            let endVal = majorTicks[idx + 1]
+            result.append(TickData(value: endVal, offset: currentNormalizedPos, isMajor: true))
         }
         
         return result
     }
     
+    func calculateWeights() -> [CGFloat] {
+        var rawWeights: [CGFloat] = []
+        let base: CGFloat = 1.0
+        
+        rawWeights.append(base) // 0.5-1.0
+        rawWeights.append(base) // 1.0-2.0
+        
+        var current = base * 0.8
+        for _ in 2..<majorTicks.count - 1 {
+            rawWeights.append(current)
+            current *= 0.8
+        }
+        
+        let total = rawWeights.reduce(0, +)
+        return rawWeights.map { $0 / total }
+    }
+    
     // MARK: - 转换函数
     
-    func valueToOffset(_ value: Double) -> CGFloat {
+    func offsetToValue(_ offset: CGFloat) -> Double {
+        if offset <= 0 { return 0.5 }
+        if offset >= 1 { return 10.0 }
+        
         let ticks = allTicksCache
         
+        for i in 0..<ticks.count - 1 {
+            let t1 = ticks[i]
+            let t2 = ticks[i + 1]
+            
+            if offset >= t1.offset && offset <= t2.offset {
+                let ratio = Double((offset - t1.offset) / (t2.offset - t1.offset))
+                let rawValue = t1.value + (t2.value - t1.value) * ratio
+                // 量化到0.1
+                return round(rawValue * 10) / 10
+            }
+        }
+        
+        return 10.0
+    }
+    
+    func valueToOffset(_ value: Double) -> CGFloat {
         if value <= 0.5 { return 0 }
-        if value >= 10.0 { return ticks.last?.offset ?? 0 }
+        if value >= 10.0 { return 1 }
+        
+        let ticks = allTicksCache
         
         for i in 0..<ticks.count - 1 {
-            if value >= ticks[i].value && value <= ticks[i + 1].value {
-                let t1 = ticks[i]
-                let t2 = ticks[i + 1]
+            let t1 = ticks[i]
+            let t2 = ticks[i + 1]
+            
+            if value >= t1.value && value <= t2.value {
                 let ratio = CGFloat((value - t1.value) / (t2.value - t1.value))
                 return t1.offset + ratio * (t2.offset - t1.offset)
             }
         }
-        return 0
-    }
-    
-    func offsetToValue(_ offset: CGFloat) -> Double {
-        let ticks = allTicksCache
         
-        if offset <= 0 { return 0.5 }
-        
-        for i in 0..<ticks.count - 1 {
-            if offset >= ticks[i].offset && offset <= ticks[i + 1].offset {
-                let t1 = ticks[i]
-                let t2 = ticks[i + 1]
-                let ratio = Double((offset - t1.offset) / (t2.offset - t1.offset))
-                return t1.value + (t2.value - t1.value) * ratio
-            }
-        }
-        return 10.0
-    }
-    
-    // MARK: - 吸附到最近的刻度（包括小刻度）
-    func snapToNearestTick() {
-        let ticks = allTicksCache
-        let currentVal = currentValue
-        
-        // 找到最近的刻度值
-        var nearestValue = ticks[0].value
-        var minDistance = abs(currentVal - nearestValue)
-        
-        for tick in ticks {
-            let distance = abs(currentVal - tick.value)
-            if distance < minDistance {
-                minDistance = distance
-                nearestValue = tick.value
-            }
-        }
-        
-        // 限制范围
-        nearestValue = min(max(nearestValue, minValue), maxValue)
-        
-        currentValue = nearestValue
-        currentOffset = valueToOffset(nearestValue)
+        return 1
     }
 }
 
