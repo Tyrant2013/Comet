@@ -14,10 +14,24 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                Image("PreviewImage")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topTrailing)
+                VStack {
+                    HStack {
+                        
+                    }
+                    .frame(height: 44)
+                    .frame(maxWidth: .infinity)
+                    let width = proxy.size.width - 20
+                    let height = width * 9 / 6
+                    Image("PreviewImage")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: width, height: height)
+                        .clipShape(.rect(cornerRadius: 8))
+                        .frame(width: width + 10, height: height + 10)
+                        .background(Color.black)
+                        .clipShape(.rect(cornerRadius: 14))
+                        .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                }
                 VStack(spacing: 0) {
                     Spacer()
                     CCLensBar(lensControl: viewModel.lensControl)
@@ -39,7 +53,6 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
         
     }
     

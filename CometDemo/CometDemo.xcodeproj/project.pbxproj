@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		013DBBCD2F333E3E00EE28EC /* Camera in Frameworks */ = {isa = PBXBuildFile; productRef = 013DBBCC2F333E3E00EE28EC /* Camera */; };
 		013DBBCF2F333E3E00EE28EC /* Comet in Frameworks */ = {isa = PBXBuildFile; productRef = 013DBBCE2F333E3E00EE28EC /* Comet */; };
+		EBA3D4F92F605C1A0013D00C /* PhotoEditor in Frameworks */ = {isa = PBXBuildFile; productRef = EBA3D4F82F605C1A0013D00C /* PhotoEditor */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EBA3D4F92F605C1A0013D00C /* PhotoEditor in Frameworks */,
 				013DBBCD2F333E3E00EE28EC /* Camera in Frameworks */,
 				013DBBCF2F333E3E00EE28EC /* Comet in Frameworks */,
 			);
@@ -40,6 +42,7 @@
 			isa = PBXGroup;
 			children = (
 				013DBBB32F333D8200EE28EC /* CometDemo */,
+				EBA3D4F72F605C1A0013D00C /* Frameworks */,
 				013DBBB22F333D8200EE28EC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -50,6 +53,13 @@
 				013DBBB12F333D8200EE28EC /* CometDemo.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		EBA3D4F72F605C1A0013D00C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -74,6 +84,7 @@
 			packageProductDependencies = (
 				013DBBCC2F333E3E00EE28EC /* Camera */,
 				013DBBCE2F333E3E00EE28EC /* Comet */,
+				EBA3D4F82F605C1A0013D00C /* PhotoEditor */,
 			);
 			productName = CometDemo;
 			productReference = 013DBBB12F333D8200EE28EC /* CometDemo.app */;
@@ -358,6 +369,11 @@
 		013DBBCE2F333E3E00EE28EC /* Comet */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Comet;
+		};
+		EBA3D4F82F605C1A0013D00C /* PhotoEditor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 013DBBCB2F333E3E00EE28EC /* XCLocalSwiftPackageReference "../../Comet" */;
+			productName = PhotoEditor;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
