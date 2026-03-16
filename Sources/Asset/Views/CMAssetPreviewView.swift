@@ -227,15 +227,15 @@ struct CMAssetPreviewItemView: View {
 }
 
 /// 预览
-struct CMAssetPreviewView_Previews: PreviewProvider {
-    static var previews: some View {
-        CMAssetPreviewView(
-            assets: [],
-            initialIndex: 0,
-            selectedAssets: .constant([]),
-            isMultiSelect: true,
-            onDismiss: {},
-            onEdit: { _ in }
-        )
-    }
-}
+//struct CMAssetPreviewView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        CMAssetPreviewView(
+//            assets: [],
+//            initialIndex: 0,
+//            selectedAssets: .constant([]),
+//            isMultiSelect: true,
+//            onDismiss: {},
+//            onEdit: { _ in }
+//        )
+//    }
+//}
