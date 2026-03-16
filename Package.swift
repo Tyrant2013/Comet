@@ -18,14 +18,19 @@ let package = Package(
         .library(
             name: "PhotoEditor",
             targets: ["PhotoEditor"]),
+        .library(
+            name: "AssetViewer",
+            targets: ["AssetViewer"])
     ],
     targets: [
         .target(
-            name: "Comet", dependencies: ["Camera", "PhotoEditor"]),
+            name: "Comet", dependencies: ["Camera", "PhotoEditor", "AssetViewer"]),
         .target(
             name: "Camera", dependencies: ["PhotoEditor"], path: "Sources/Camera"),
         .target(
             name: "PhotoEditor", path: "Sources/PhotoEditor"),
+        .target(
+            name: "AssetViewer", dependencies: ["PhotoEditor"], path: "Sources/AssetViewer"),
         .testTarget(
             name: "PhotoEditorTests",
             dependencies: ["PhotoEditor"],
