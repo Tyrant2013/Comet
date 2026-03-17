@@ -1,5 +1,4 @@
 import SwiftUI
-import Asset
 
 /// 图片预览视图
 struct CMAssetPreviewView: View {

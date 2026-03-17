@@ -65,7 +65,6 @@ class CMAssetManager {
         
         return try await withCheckedThrowingContinuation { continuation in
             var createdCollection: PHObjectPlaceholder?
-            var error: Error?
             
             PHPhotoLibrary.shared().performChanges {
                 let creationRequest = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: title)
@@ -79,7 +78,7 @@ class CMAssetManager {
                         continuation.resume(throwing: CMAssetError.albumNotFound)
                     }
                 } else {
-                    continuation.resume(throwing: error ?? CMAssetError.operationFailed("创建相册失败"))
+                    continuation.resume(throwing: CMAssetError.operationFailed("创建相册失败"))
                 }
             }
         }

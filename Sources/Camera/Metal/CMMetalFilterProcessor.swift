@@ -76,7 +76,7 @@ final class CMMetalFilterProcessor {
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(texture, index: 0)
         
-        var filterUniformData = makeFilterUniformData(filters: filters)
+        let filterUniformData = makeFilterUniformData(filters: filters)
         filterUniformData.withUnsafeBytes { rawBuffer in
             guard let ptr = rawBuffer.baseAddress else { return }
             encoder.setFragmentBytes(ptr, length: rawBuffer.count, index: 0)
@@ -117,7 +117,7 @@ final class CMMetalFilterProcessor {
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(inputTexture, index: 0)
         
-        var filterUniformData = makeFilterUniformData(filters: filters)
+        let filterUniformData = makeFilterUniformData(filters: filters)
         filterUniformData.withUnsafeBytes { rawBuffer in
             guard let ptr = rawBuffer.baseAddress else { return }
             encoder.setFragmentBytes(ptr, length: rawBuffer.count, index: 0)

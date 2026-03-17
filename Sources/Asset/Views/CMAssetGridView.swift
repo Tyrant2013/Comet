@@ -1,6 +1,5 @@
 import SwiftUI
 import Photos
-import Asset
 
 /// 图片网格视图
 struct CMAssetGridView: View {

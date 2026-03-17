@@ -143,7 +143,7 @@ public final class CMPhotoEditorMetalFilterProcessor {
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setFragmentTexture(inputTexture, index: 0)
 
-        var filterUniformData = makeFilterUniformData(filterType: filterType)
+        let filterUniformData = makeFilterUniformData(filterType: filterType)
         filterUniformData.withUnsafeBytes { rawBuffer in
             guard let ptr = rawBuffer.baseAddress else { return }
             encoder.setFragmentBytes(ptr, length: rawBuffer.count, index: 0)
@@ -245,7 +245,7 @@ public final class CMPhotoEditorMetalFilterProcessor {
     }
 
     private static func makeLibrary(from device: MTLDevice) -> MTLLibrary? {
-        if let library = try? device.makeDefaultLibrary() {
+        if let library = device.makeDefaultLibrary() {
             return library
         }
         if let library = try? device.makeDefaultLibrary(bundle: Bundle.module) {

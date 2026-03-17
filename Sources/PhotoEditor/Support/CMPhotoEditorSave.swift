@@ -55,10 +55,9 @@ public struct CMPhotoEditorSave {
     }
     
     private static func saveImage(_ image: UIImage, completion: @escaping (Result<Void, SaveError>) -> Void) {
-        var placeholder: PHObjectPlaceholder?
         PHPhotoLibrary.shared().performChanges {
             let request = PHAssetChangeRequest.creationRequestForAsset(from: image)
-            placeholder = request.placeholderForCreatedAsset
+            let _ = request.placeholderForCreatedAsset
         } completionHandler: { success, error in
             DispatchQueue.main.async {
                 if success {

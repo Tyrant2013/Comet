@@ -1,5 +1,4 @@
 import SwiftUI
-import Asset
 
 /// 相册选择器主视图
 struct CMAssetPickerView: View {
@@ -175,14 +174,9 @@ struct CMAssetPickerView: View {
     /// 请求权限
     private func requestPermission() {
         Task {
-            do {
-                hasPermission = try await CMAssetManager.shared.requestPermission()
-                if hasPermission {
-                    loadAlbums()
-                }
-            } catch {
-                errorMessage = "请求权限失败"
-                isLoading = false
+            hasPermission = await CMAssetManager.shared.requestPermission()
+            if hasPermission {
+                loadAlbums()
             }
         }
     }
