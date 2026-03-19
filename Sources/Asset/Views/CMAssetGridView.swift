@@ -88,7 +88,13 @@ struct CMAssetItemView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             // 获取视图在屏幕上的位置
-            let window = UIApplication.shared.windows.first
+            let window: UIWindow?
+            if #available(iOS 15, *) {
+                window = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first
+            }
+            else {
+                window = UIApplication.shared.windows.first
+            }
             let rect = window?.convert(bounds, from: UIView()) ?? .zero
             onTap(rect)
         }
