@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "Comet",
-    platforms: [.iOS(.v14)],
+    platforms: [.iOS(.v15)],
     products: [
         .library(
             name: "Comet",
@@ -22,6 +22,8 @@ let package = Package(
         .library(
             name: "Asset",
             targets: ["Asset"]),
+        .executable(name: "CometDemo", targets: ["CometDemo"]),
+        // .executable(name: "Comet_Camera", targets: ["Comet_Camera"])
     ],
     targets: [
         .target(
@@ -32,6 +34,8 @@ let package = Package(
             name: "PhotoEditor", path: "Sources/PhotoEditor"),
         .target(
             name: "Asset", dependencies: ["PhotoEditor"], path: "Sources/Asset"),
+        .executableTarget(name: "CometDemo", dependencies: ["Comet"], path: "CometDemo/CometDemo"),
+        // .executableTarget(name: "Comet_Camera", dependencies: ["Comet"], path: "Comet Camera/Comet Camera"),
         .testTarget(
             name: "PhotoEditorTests",
             dependencies: ["PhotoEditor"],
