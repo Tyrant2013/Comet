@@ -7,10 +7,13 @@
 
 import SwiftUI
 import Combine
+import Comet
+import Asset
 
 struct ContentView: View {
     @ObservedObject var viewModel = CCCameraViewModel()
-
+@State var show = false
+    @State var items: [CMAsset] = []
     var body: some View {
         GeometryReader { proxy in
             ZStack {
@@ -53,7 +56,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.leading, 50)
                         
-                        Button(action: {}) {
+                        Button(action: { show.toggle() }) {
                             Circle()
                                 .foregroundStyle(.white)
                                 .padding(5)
@@ -77,6 +80,7 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .assetPicker(isPresented: $show, selectedAssets: $items)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.ignoresSafeArea())

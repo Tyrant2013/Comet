@@ -55,17 +55,7 @@ struct CMAssetPickerView: View {
                     )
                     
                     // 内容区域
-                    if showAlbumList {
-                        AlbumListView(
-                            albums: albums,
-                            selectedAlbum: $selectedAlbum,
-                            onSelectAlbum: { album in
-                                selectedAlbum = album
-                                showAlbumList = false
-                                loadAssets(in: album)
-                            }
-                        )
-                    } else {
+                    ZStack {
                         CMAssetGridView(
                             assets: assets,
                             selectedAssets: $selectedAssets,
@@ -78,35 +68,6 @@ struct CMAssetPickerView: View {
                                 showPreview = true
                             }
                         )
-                    }
-                }
-            }
-        }
-        ZStack(alignment: .topLeading) {
-            // 主内容
-            VStack {
-                if !hasPermission {
-                    PermissionView {
-                        requestPermission()
-                    }
-                } else if let errorMessage = errorMessage {
-                    ErrorView(message: errorMessage) {
-                        loadAlbums()
-                    }
-                } else if isLoading {
-                    LoadingView()
-                } else {
-                    VStack {
-                        // 顶部导航栏
-                        NavigationBar(
-                            title: selectedAlbum?.title ?? "相册",
-                            showAlbumList: $showAlbumList,
-                            isMultiSelect: $isMultiSelect,
-                            selectedCount: selectedAssets.count,
-                            onDone: {}
-                        )
-                        
-                        // 内容区域
                         if showAlbumList {
                             AlbumListView(
                                 albums: albums,
@@ -117,58 +78,44 @@ struct CMAssetPickerView: View {
                                     loadAssets(in: album)
                                 }
                             )
-                        } else {
-                            CMAssetGridView(
-                                assets: assets,
-                                selectedAssets: $selectedAssets,
-                                isMultiSelect: isMultiSelect,
-                                onAssetTap: { asset, rect in
-                                    previewStartFrame = rect
-                                    if let index = assets.firstIndex(where: { $0.id == asset.id }) {
-                                        previewIndex = index
-                                    }
-                                    showPreview = true
-                                }
-                            )
                         }
                     }
                 }
-            }
-            
-            // 预览和编辑视图
-            if showPreview {
-                HeroAnimationContainer(isVisible: $showPreview) {
-                    CMAssetPreviewView(
-                        assets: $assets,
-                        initialIndex: previewIndex,
-                        selectedAssets: $selectedAssets,
-                        isMultiSelect: isMultiSelect,
-                        onDismiss: { showPreview = false },
-                        onEdit: { asset in
-                            showPreview = false
-                            currentEditAsset = asset
-                            showEditView = true
-                        }
-                    )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                // 预览和编辑视图
+                if showPreview {
+                    HeroAnimationContainer(isVisible: $showPreview) {
+                        CMAssetPreviewView(
+                            assets: $assets,
+                            initialIndex: previewIndex,
+                            selectedAssets: $selectedAssets,
+                            isMultiSelect: isMultiSelect,
+                            onDismiss: { showPreview = false },
+                            onEdit: { asset in
+                                showPreview = false
+                                currentEditAsset = asset
+                                showEditView = true
+                            }
+                        )
+                    }
                 }
-            }
-            
-            if showEditView, let asset = currentEditAsset {
-                HeroAnimationContainer(isVisible: $showEditView) {
-                    CMAssetDetailView(
-                        asset: asset,
-                        onDismiss: { showEditView = false },
-                        onSave: { editedAsset in
-                            showEditView = false
-                            // 这里可以添加保存逻辑
-                        }
-                    )
+                
+                if showEditView, let asset = currentEditAsset {
+                    HeroAnimationContainer(isVisible: $showEditView) {
+                        CMAssetDetailView(
+                            asset: asset,
+                            onDismiss: { showEditView = false },
+                            onSave: { editedAsset in
+                                showEditView = false
+                                // 这里可以添加保存逻辑
+                            }
+                        )
+                    }
                 }
             }
         }
-        .onAppear {
-            requestPermission()
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white.ignoresSafeArea())
     }
     
     /// 请求权限
@@ -371,6 +318,10 @@ struct LoadingView: View {
 /// 预览
 struct CMAssetPickerView_Previews: PreviewProvider {
     static var previews: some View {
-        CMAssetPickerView(selectedAssets: .constant([]))
+        VStack {
+            CMAssetPickerView(selectedAssets: .constant([]))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.orange.ignoresSafeArea())
     }
 }

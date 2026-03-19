@@ -6,6 +6,7 @@ class CMAssetManager {
     /// 共享实例
     static let shared = CMAssetManager()
     
+    private var assetFetchResult: CMFetchResult<PHAsset>?
     /// 私有初始化方法
     private init() {}
     
@@ -118,6 +119,8 @@ class CMAssetManager {
             fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
             
             let fetchResult = PHAsset.fetchAssets(in: album.phAssetCollection, options: fetchOptions)
+            self.assetFetchResult = CMFetchResult(result: fetchResult)
+            
             var assets: [CMAsset] = []
             
             fetchResult.enumerateObjects { asset, _, _ in

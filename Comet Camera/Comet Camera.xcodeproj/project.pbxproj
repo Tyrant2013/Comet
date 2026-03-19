@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		01E8AC222F6BD701006695D8 /* Comet in Frameworks */ = {isa = PBXBuildFile; productRef = 01E8AC212F6BD701006695D8 /* Comet */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		01516B142F4EC81D0029059D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				01E8AC222F6BD701006695D8 /* Comet in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +130,7 @@
 			);
 			name = "Comet Camera";
 			packageProductDependencies = (
+				01E8AC212F6BD701006695D8 /* Comet */,
 			);
 			productName = "Comet Camera";
 			productReference = 01516AFF2F4EC81A0029059D /* Comet Camera.app */;
@@ -208,6 +214,9 @@
 			);
 			mainGroup = 01516AF62F4EC81A0029059D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				01E8AC202F6BD701006695D8 /* XCLocalSwiftPackageReference "../../Comet" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 01516B002F4EC81A0029059D /* Products */;
 			projectDirPath = "";
@@ -294,6 +303,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Comet Camera/Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = Use;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = Use;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Use;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -329,6 +341,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Comet Camera/Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = Use;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = Use;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Use;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -591,6 +606,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		01E8AC202F6BD701006695D8 /* XCLocalSwiftPackageReference "../../Comet" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../Comet;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		01E8AC212F6BD701006695D8 /* Comet */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Comet;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 01516AF72F4EC81A0029059D /* Project object */;
 }

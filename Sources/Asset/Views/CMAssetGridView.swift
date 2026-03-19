@@ -14,22 +14,25 @@ struct CMAssetGridView: View {
     /// 列数
     let columns: Int = 3
     
+    var spacing: CGFloat = 1
     var body: some View {
-        let gridItemSize = UIScreen.main.bounds.width / CGFloat(columns)
-        let itemHeight = gridItemSize
-        
-        LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridItemSize), spacing: 1), count: columns), spacing: 1) {            
-            ForEach(assets) { asset in
-                CMAssetItemView(
-                    asset: asset,
-                    isSelected: selectedAssets.contains(asset),
-                    isMultiSelect: isMultiSelect,
-                    onTap: { rect in
-                        onAssetTap(asset, rect)
-                    }
-                )
-                .frame(width: gridItemSize, height: itemHeight)
-                .clipShape(Rectangle())
+        GeometryReader { reader in
+            let gridWidth = reader.size.width - CGFloat(columns - 1) * spacing
+            let gridItemSize = gridWidth / CGFloat(columns)
+            let itemHeight = gridItemSize
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridItemSize), spacing: spacing), count: columns), spacing: 1) {
+                ForEach(assets) { asset in
+                    CMAssetItemView(
+                        asset: asset,
+                        isSelected: selectedAssets.contains(asset),
+                        isMultiSelect: isMultiSelect,
+                        onTap: { rect in
+                            onAssetTap(asset, rect)
+                        }
+                    )
+                    .frame(width: gridItemSize, height: itemHeight)
+                    .clipShape(Rectangle())
+                }
             }
         }
         .background(Color.white)
