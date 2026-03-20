@@ -87,15 +87,15 @@ struct CMAssetPreviewView: View {
                         Button(action: toggleSelection) {
                             ZStack {
                                 Circle()
-                                    .stroke(selectedAssets.contains(currentAsset) ? Color.blue : Color.white, lineWidth: 2)
-                                    .background(selectedAssets.contains(currentAsset) ? Color.blue : Color.clear)
+//                                    .stroke(selectedAssets.contains(currentAsset) ? Color.blue : Color.white, lineWidth: 2)
+//                                    .background(selectedAssets.contains(currentAsset) ? Color.blue : Color.clear)
                                     .frame(width: 32, height: 32)
-                                
-                                if selectedAssets.contains(currentAsset) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 18, weight: .bold))
-                                }
+//
+//                                if selectedAssets.contains(currentAsset) {
+//                                    Image(systemName: "checkmark")
+//                                        .foregroundColor(.white)
+//                                        .font(.system(size: 18, weight: .bold))
+//                                }
                             }
                             .padding()
                         }
@@ -138,11 +138,11 @@ struct CMAssetPreviewView: View {
     
     /// 切换选择状态
     private func toggleSelection() {
-        if selectedAssets.contains(currentAsset) {
-            selectedAssets.removeAll { $0.id == currentAsset.id }
-        } else {
-            selectedAssets.append(currentAsset)
-        }
+//        if selectedAssets.contains(currentAsset) {
+//            selectedAssets.removeAll { $0.id == currentAsset.id }
+//        } else {
+//            selectedAssets.append(currentAsset)
+//        }
     }
 }
 

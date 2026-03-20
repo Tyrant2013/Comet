@@ -1,9 +1,14 @@
 import SwiftUI
 
+
+
 /// 相册选择器主视图
 struct CMAssetPickerView: View {
+    @StateObject var pageControl = CMPickerViewController()
+    @StateObject var albumViewModel: CMAlbumViewModel = CMAlbumViewModel()
+    @StateObject var viewModel: CMAssetPickerViewModel = CMAssetPickerViewModel()
     /// 选中的图片列表
-    @Binding var selectedAssets: [CMAsset]
+//    @Binding var selectedAssets: [CMAsset]
     /// 是否为多选模式
     @State private var isMultiSelect: Bool = false
     /// 相册列表
@@ -12,10 +17,10 @@ struct CMAssetPickerView: View {
     @State private var selectedAlbum: CMAssetCollection?
     /// 图片列表
     @State private var assets: [CMAsset] = []
-    /// 是否显示相册列表
-    @State private var showAlbumList: Bool = true
-    /// 是否显示预览
-    @State private var showPreview: Bool = false
+//    /// 是否显示相册列表
+//    @State private var showAlbumList: Bool = true
+//    /// 是否显示预览
+//    @State private var showPreview: Bool = false
     /// 预览的图片索引
     @State private var previewIndex: Int = 0
     /// 是否显示编辑视图
@@ -32,25 +37,27 @@ struct CMAssetPickerView: View {
     @State private var previewStartFrame: CGRect = .zero
     
     var body: some View {
+        
         ZStack {
-            if !hasPermission {
+            switch pageControl.viewState {
+            case .noPermission:
                 PermissionView {
-                    requestPermission()
+                    viewModel.requestPermission()
                 }
-            } else if let errorMessage = errorMessage {
-                ErrorView(message: errorMessage) {
-                    loadAlbums()
+            case .error(let message):
+                ErrorView(message: message) {
+                    albumViewModel.loadAlbums()
                 }
-            } else if isLoading {
+            case .loading:
                 LoadingView()
-            } else {
+            case .assets:
                 VStack {
                     // 顶部导航栏
                     NavigationBar(
                         title: selectedAlbum?.title ?? "相册",
-                        showAlbumList: $showAlbumList,
+                        showAlbumList: $pageControl.showAlbumList,
                         isMultiSelect: $isMultiSelect,
-                        selectedCount: selectedAssets.count,
+                        selectedCount: viewModel.selectedAssets.count,
                         onDone: {}
                     )
                     
@@ -58,48 +65,27 @@ struct CMAssetPickerView: View {
                     ZStack {
                         CMAssetGridView(
                             assetFetchResult: CMAssetManager.shared.assetFetchResult,
-                            selectedAssets: $selectedAssets,
+                            selectedAssets: $viewModel.selectedAssets,
                             isMultiSelect: isMultiSelect,
                             onAssetTap: { asset, rect in
-                                previewStartFrame = rect
-                                if let index = assets.firstIndex(where: { $0.id == asset.id }) {
-                                    previewIndex = index
-                                }
-                                showPreview = true
+                                pageControl.showPreview = true
                             }
                         )
                         .padding(.horizontal, 6)
-                        if showAlbumList {
+                        if pageControl.showAlbumList {
                             AlbumListView(
                                 albums: albums,
                                 selectedAlbum: $selectedAlbum,
                                 onSelectAlbum: { album in
                                     selectedAlbum = album
-                                    showAlbumList = false
-                                    loadAssets(in: album)
+                                    pageControl.showAlbumList = false
+                                    viewModel.loadAssets(in: album)
                                 }
                             )
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // 预览和编辑视图
-                if showPreview {
-                    HeroAnimationContainer(isVisible: $showPreview) {
-                        CMAssetPreviewView(
-                            assets: $assets,
-                            initialIndex: previewIndex,
-                            selectedAssets: $selectedAssets,
-                            isMultiSelect: isMultiSelect,
-                            onDismiss: { showPreview = false },
-                            onEdit: { asset in
-                                showPreview = false
-                                currentEditAsset = asset
-                                showEditView = true
-                            }
-                        )
-                    }
-                }
                 
                 if showEditView, let asset = currentEditAsset {
                     HeroAnimationContainer(isVisible: $showEditView) {
@@ -117,48 +103,21 @@ struct CMAssetPickerView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white.ignoresSafeArea())
-        .onAppear(perform: requestPermission)
-    }
-    
-    /// 请求权限
-    private func requestPermission() {
-        Task {
-            hasPermission = await CMAssetManager.shared.requestPermission()
-            if hasPermission {
-                loadAlbums()
-            }
-        }
-    }
-    
-    /// 加载相册列表
-    private func loadAlbums() {
-        isLoading = true
-        Task {
-            do {
-                albums = try await CMAssetManager.shared.getAlbums()
-                if let firstAlbum = albums.first {
-                    selectedAlbum = firstAlbum
-                    loadAssets(in: firstAlbum)
-                }
-                isLoading = false
-            } catch {
-                errorMessage = "加载相册失败"
-                isLoading = false
-            }
-        }
-    }
-    
-    /// 加载相册中的图片
-    /// - Parameter album: 相册
-    private func loadAssets(in album: CMAssetCollection) {
-        isLoading = true
-        Task {
-            do {
-                try await CMAssetManager.shared.getAssets(in: album)
-                isLoading = false
-            } catch {
-                errorMessage = "加载图片失败"
-                isLoading = false
+        // 预览和编辑视图
+        .fullScreenCover(isPresented: $pageControl.showPreview) {
+            HeroAnimationContainer(isVisible: $pageControl.showPreview) {
+                CMAssetPreviewView(
+                    assets: $assets,
+                    initialIndex: previewIndex,
+                    selectedAssets: $viewModel.selectedAssets,
+                    isMultiSelect: isMultiSelect,
+                    onDismiss: { pageControl.showPreview = false },
+                    onEdit: { asset in
+                        pageControl.showPreview = false
+                        currentEditAsset = asset
+                        showEditView = true
+                    }
+                )
             }
         }
     }
@@ -177,8 +136,16 @@ struct NavigationBar: View {
     /// 完成回调
     let onDone: () -> Void
     
+    
+    @Environment(\.dismiss) var dismiss
     var body: some View {
         HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(width: 44, height: 44)
+            }
             Button(action: { showAlbumList.toggle() }) {
                 Text(title)
                     .font(.system(size: 18, weight: .semibold))
@@ -186,8 +153,7 @@ struct NavigationBar: View {
                 Image(systemName: "chevron.down")
                     .foregroundColor(.black)
             }
-            
-            Spacer()
+            .frame(maxWidth: .infinity)
             
             if isMultiSelect {
                 Text("已选择 \(selectedCount) 项")
@@ -204,8 +170,9 @@ struct NavigationBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.white)
-        .shadow(radius: 2)
+        .frame(height: 44)
+        .background(Color.red)
+//        .shadow(radius: 2)
     }
 }
 
@@ -321,7 +288,7 @@ struct LoadingView: View {
 struct CMAssetPickerView_Previews: PreviewProvider {
     static var previews: some View {
         VStack {
-            CMAssetPickerView(selectedAssets: .constant([]))
+            CMAssetPickerView()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.orange.ignoresSafeArea())

@@ -21,20 +21,48 @@ struct CMAssetGridView: View {
             let gridWidth = reader.size.width - CGFloat(columns - 1) * spacing
             let gridItemSize = gridWidth / CGFloat(columns)
             let itemHeight = gridItemSize
-            LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridItemSize), spacing: spacing), count: columns), spacing: 1) {
-                ForEach((0..<assetFetchResult.count).enumerated(), id: \.offset) { index, _ in
-                    if let obj = assetFetchResult.object(at: index) {
-                        let asset = CMAsset(phAsset: obj)
-                        CMAssetItemView(
-                            asset: asset,
-                            isSelected: selectedAssets.contains(asset),
-                            isMultiSelect: isMultiSelect,
-                            onTap: { rect in
-                                onAssetTap(asset, rect)
-                            }
-                        )
-                        .frame(width: gridItemSize, height: itemHeight)
-                        .clipShape(Rectangle())
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridItemSize), spacing: spacing), count: columns), spacing: 1) {
+                    ForEach((0..<assetFetchResult.count).enumerated(), id: \.offset) { index, _ in
+                        if let obj = assetFetchResult.object(at: index) {
+                            let asset = CMAsset(phAsset: obj)
+                            let isSelected = selectedAssets.contains(asset)
+                            CMAssetItemView(
+                                asset: asset,
+                                onTap: { rect in
+                                    onAssetTap(asset, rect)
+                                }
+                            )
+                            .frame(width: gridItemSize, height: itemHeight)
+                            .clipShape(Rectangle())
+                            .contentShape(.rect)
+                            .overlay(
+                                Group {
+                                    if isMultiSelect {
+                                        HStack {
+                                            Spacer()
+                                            Circle()
+                                                .stroke(isSelected ? Color.blue : Color.white, lineWidth: 2)
+                                                .background(isSelected ? Color.blue : Color.clear)
+                                                .frame(width: 24, height: 24)
+                                                .padding(4)
+                                                .overlay(
+                                                    Group {
+                                                        if isSelected {
+                                                            Image(systemName: "checkmark")
+                                                                .foregroundColor(.white)
+                                                                .font(.system(size: 14, weight: .bold))
+                                                        }
+                                                    },
+                                                    alignment: .center
+                                                )
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                }
+                                , alignment: .topTrailing
+                            )
+                        }
                     }
                 }
             }
@@ -46,11 +74,11 @@ struct CMAssetGridView: View {
 /// 单个图片项视图
 struct CMAssetItemView: View {
     /// 图片资源
-    let asset: CMAsset
+    @ObservedObject var asset: CMAsset
     /// 是否被选中
-    let isSelected: Bool
+//    let isSelected: Bool
     /// 是否为多选模式
-    let isMultiSelect: Bool
+//    let isMultiSelect: Bool
     /// 点击回调
     let onTap: (CGRect) -> Void
     /// 图片加载状态
@@ -59,38 +87,14 @@ struct CMAssetItemView: View {
     
     var body: some View {
         ZStack {
-            if let image = image {
+            if let image = asset.image {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .hero(id: asset.id)
             } else {
                 Color.gray.opacity(0.3)
             }
             
-            if isMultiSelect {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Circle()
-                            .stroke(isSelected ? Color.blue : Color.white, lineWidth: 2)
-                            .background(isSelected ? Color.blue : Color.clear)
-                            .frame(width: 24, height: 24)
-                            .padding(4)
-                            .overlay(
-                                Group {
-                                    if isSelected {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.white)
-                                            .font(.system(size: 14, weight: .bold))
-                                    }
-                                },
-                                alignment: .center
-                            )
-                    }
-                    Spacer()
-                }
-            }
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -105,26 +109,42 @@ struct CMAssetItemView: View {
             let rect = window?.convert(bounds, from: UIView()) ?? .zero
             onTap(rect)
         }
-        .onAppear {
-            loadImage()
-        }
     }
     
     /// 加载图片
-    private func loadImage() {
-        let targetSize = CGSize(width: 200, height: 200)
-        CMAssetLoader.shared.loadImage(
-            for: asset,
-            targetSize: targetSize
-        ) { loadedImage, error in
-            if let loadedImage = loadedImage {
-                DispatchQueue.main.async {
-                    self.image = loadedImage
-                    self.isLoading = false
-                }
-            }
-        }
-    }
+//    private func loadImage() {
+//
+//        if let cached = CMAssetLoader.shared.cachedImage(for: asset, targetSize: asset.targetSize) {
+//            withTransaction(Transaction(animation: nil)) {
+//                self.image = cached
+//                self.isLoading = false
+//            }
+//            return
+//        }
+//
+//        guard image == nil else {
+//            isLoading = false
+//            return
+//        }
+//
+//        CMAssetLoader.shared.loadImage(
+//            for: asset,
+//            targetSize: asset.targetSize
+//        ) { loadedImage, error in
+//            if let loadedImage = loadedImage {
+//                withTransaction(Transaction(animation: nil)) {
+//                    self.image = loadedImage
+//                }
+//                self.isLoading = false
+//                return
+//            }
+//
+//            if error != nil {
+//                // 出错时结束 loading，避免单元格持续菊花导致闪烁重绘
+//                self.isLoading = false
+//            }
+//        }
+//    }
     
     /// 获取视图边界
     private var bounds: CGRect {

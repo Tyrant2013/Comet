@@ -20,7 +20,7 @@ public struct CMAssetPicker {
                         isPresented.wrappedValue = false
                     }
                 
-                CMAssetPickerView(selectedAssets: selectedAssets)
+                CMAssetPickerView()
                     .frame(maxHeight: .infinity)
                     .background(Color.white)
                     .cornerRadius(20, corners: [.topLeft, .topRight])
@@ -42,14 +42,17 @@ extension View {
         selectedAssets: Binding<[CMAsset]>,
         allowsMultipleSelection: Bool = true
     ) -> some View {
-        ZStack {
-            self
-            CMAssetPicker.show(
-                isPresented: isPresented,
-                selectedAssets: selectedAssets,
-                allowsMultipleSelection: allowsMultipleSelection
-            )
+        self.fullScreenCover(isPresented: isPresented) {
+            CMAssetPickerView()
         }
+//        ZStack {
+//            self
+//            CMAssetPicker.show(
+//                isPresented: isPresented,
+//                selectedAssets: selectedAssets,
+//                allowsMultipleSelection: allowsMultipleSelection
+//            )
+//        }
     }
 }
 

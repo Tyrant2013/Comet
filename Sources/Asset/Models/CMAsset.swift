@@ -1,8 +1,9 @@
 import Foundation
 import Photos
+import UIKit
 
 /// 图片资源模型
-public struct CMAsset: Identifiable, Equatable, Hashable {
+public class CMAsset: Identifiable, Equatable, Hashable, ObservableObject {
     /// 唯一标识符
     public let id: String
     /// PHAsset对象
@@ -14,6 +15,8 @@ public struct CMAsset: Identifiable, Equatable, Hashable {
     /// 图片高度
     public let height: CGFloat
     
+    let targetSize = CGSize(width: 200, height: 200)
+    @Published var image: UIImage?
     /// 初始化方法
     /// - Parameter phAsset: PHAsset对象
     init(phAsset: PHAsset) {
@@ -22,6 +25,26 @@ public struct CMAsset: Identifiable, Equatable, Hashable {
         self.creationDate = phAsset.creationDate
         self.width = CGFloat(phAsset.pixelWidth)
         self.height = CGFloat(phAsset.pixelHeight)
+        
+        if let cached = CMAssetLoader.shared.cachedImage(for: self, targetSize: targetSize) {
+            image = cached
+        }
+        
+        Task {
+            await loadImage()
+        }
+    }
+    
+    func loadImage() async {
+        CMAssetLoader.shared.loadImage(
+            for: self,
+            targetSize: targetSize
+        ) { loadedImage, error in
+            guard let loadedImage = loadedImage else {
+                return
+            }
+            self.image = loadedImage
+        }
     }
     
     /// 比较两个CMAsset是否相等

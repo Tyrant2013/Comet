@@ -8,12 +8,9 @@ class CMAssetLoader {
     static let shared = CMAssetLoader()
     
     /// 图片管理器
-    private let imageManager = PHImageManager.default()
+    private let imageManager = PHCachingImageManager()
     /// 图片缓存
     private let imageCache = NSCache<NSString, UIImage>()
-    /// 并发队列
-    private let queue = DispatchQueue(label: "com.comet.asset.loader", qos: .userInitiated, attributes: .concurrent)
-    
     /// 私有初始化方法
     private init() {
         // 设置缓存大小
@@ -43,39 +40,58 @@ class CMAssetLoader {
         completion: @escaping (UIImage?, Error?) -> Void
     ) {
         // 检查缓存
-        let cacheKey = "\(asset.id)_\(targetSize.width)_\(targetSize.height)" as NSString
+        let cacheKey = makeCacheKey(for: asset, targetSize: targetSize)
         if let cachedImage = imageCache.object(forKey: cacheKey) {
-            completion(cachedImage, nil)
+            DispatchQueue.main.async {
+                completion(cachedImage, nil)
+            }
             return
         }
         
         // 配置图片请求选项
         let options = PHImageRequestOptions()
-        options.deliveryMode = .highQualityFormat
+        options.deliveryMode = .opportunistic
         options.resizeMode = .fast
         options.isNetworkAccessAllowed = true
+        options.isSynchronous = false
         
-        // 在并发队列中请求图片
-        queue.async {
-            self.imageManager.requestImage(
-                for: asset.phAsset,
-                targetSize: targetSize,
-                contentMode: contentMode,
-                options: options
-            ) { [weak self] image, info in
+        imageManager.requestImage(
+            for: asset.phAsset,
+            targetSize: targetSize,
+            contentMode: contentMode,
+            options: options
+        ) { [weak self] image, info in
+            let isCancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
+            if isCancelled { return }
+            
+            if let error = info?[PHImageErrorKey] as? Error {
                 DispatchQueue.main.async {
-                    if let image = image {
-                        // 缓存图片
-                        self?.imageCache.setObject(image, forKey: cacheKey)
-                        completion(image, nil)
-                    } else if let error = info?[PHImageErrorKey] as? Error {
-                        completion(nil, error)
-                    } else {
-                        completion(nil, CMAssetError.assetNotFound)
-                    }
+                    completion(nil, error)
                 }
+                return
+            }
+            
+            // Opportunistic 模式下，先回调降级图再回调高清图。忽略降级图可避免闪烁。
+            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            if isDegraded { return }
+            
+            guard let image else {
+                DispatchQueue.main.async {
+                    completion(nil, CMAssetError.assetNotFound)
+                }
+                return
+            }
+            
+            self?.imageCache.setObject(image, forKey: cacheKey)
+            DispatchQueue.main.async {
+                completion(image, nil)
             }
         }
+    }
+
+    /// 读取缓存中的图片（如果存在）
+    func cachedImage(for asset: CMAsset, targetSize: CGSize) -> UIImage? {
+        imageCache.object(forKey: makeCacheKey(for: asset, targetSize: targetSize))
     }
     
     /// 异步加载图片
@@ -154,5 +170,9 @@ class CMAssetLoader {
         // 这里我们只能清除整个缓存或者不实现此功能
         // 如果需要精确控制，建议使用自定义缓存实现
         clearCache()
+    }
+
+    private func makeCacheKey(for asset: CMAsset, targetSize: CGSize) -> NSString {
+        "\(asset.id)_\(Int(targetSize.width))_\(Int(targetSize.height))" as NSString
     }
 }
