@@ -1,9 +1,11 @@
 import SwiftUI
+import Photos
 
 /// 图片预览视图
 struct CMAssetPreviewView: View {
     /// 图片列表
-    @Binding var assets: [CMAsset]
+//    @Binding var assets: [CMAsset]
+    let fetchResult: CMFetchResult<PHAsset>
     /// 初始选中的图片索引
     let initialIndex: Int
     /// 选中的图片列表
@@ -24,14 +26,15 @@ struct CMAssetPreviewView: View {
     @State private var isDragging: Bool = false
     
     init(
-        assets: Binding<[CMAsset]>,
+        assetFetchResult: CMFetchResult<PHAsset>,
         initialIndex: Int,
         selectedAssets: Binding<[CMAsset]>,
         isMultiSelect: Bool,
         onDismiss: @escaping () -> Void,
         onEdit: @escaping (CMAsset) -> Void
     ) {
-        self._assets = assets
+//        self._assets = assets
+        self.fetchResult = assetFetchResult
         self.initialIndex = initialIndex
         self._selectedAssets = selectedAssets
         self.isMultiSelect = isMultiSelect
@@ -47,93 +50,98 @@ struct CMAssetPreviewView: View {
             
             GeometryReader { geometry in
                 TabView(selection: $currentIndex) {
-                    ForEach(assets.indices, id: \.self) { index in
-                        CMAssetPreviewItemView(
-                            asset: assets[index],
-                            scale: $scale,
-                            offset: $offset,
-                            isDragging: $isDragging,
-                            onDismiss: onDismiss
-                        )
-                        .tag(index)
+                    //                    ForEach(assets.indices, id: \.self) { index in
+                    ForEach(0..<fetchResult.count, id: \.self) { index in
+                        if let phAsset = fetchResult.object(at: index) {
+                            let asset = CMAsset(phAsset: phAsset)
+                            CMAssetPreviewItemView(
+                                asset: asset,
+                                scale: $scale,
+                                offset: $offset,
+                                isDragging: $isDragging,
+                                onDismiss: onDismiss
+                            )
+                            .tag(index)
+                        }
                     }
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                .gesture(
-                    DragGesture(minimumDistance: 50, coordinateSpace: .global)
-                        .onEnded { value in
-                            if scale == 1.0 {
-                                if value.translation.height > 100 {
-                                    onDismiss()
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .gesture(
+                        DragGesture(minimumDistance: 50, coordinateSpace: .global)
+                            .onEnded { value in
+                                if scale == 1.0 {
+                                    if value.translation.height > 100 {
+                                        onDismiss()
+                                    }
                                 }
                             }
-                        }
-                )
-            }
-            
-            // 顶部工具栏
-            VStack {
-                HStack {
-                    Button(action: onDismiss) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.white)
-                            .font(.system(size: 24))
-                            .padding()
-                    }
-                    
-                    Spacer()
-                    
-                    if isMultiSelect {
-                        Button(action: toggleSelection) {
-                            ZStack {
-                                Circle()
-//                                    .stroke(selectedAssets.contains(currentAsset) ? Color.blue : Color.white, lineWidth: 2)
-//                                    .background(selectedAssets.contains(currentAsset) ? Color.blue : Color.clear)
-                                    .frame(width: 32, height: 32)
-//
-//                                if selectedAssets.contains(currentAsset) {
-//                                    Image(systemName: "checkmark")
-//                                        .foregroundColor(.white)
-//                                        .font(.system(size: 18, weight: .bold))
-//                                }
-                            }
-                            .padding()
-                        }
-                    } else {
-                        Button(action: { onEdit(currentAsset) }) {
-                            Image(systemName: "edit")
+                    )
+                }
+                
+                // 顶部工具栏
+                VStack {
+                    HStack {
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark")
                                 .foregroundColor(.white)
                                 .font(.system(size: 24))
                                 .padding()
                         }
+                        
+                        Spacer()
+                        
+                        if isMultiSelect {
+                            Button(action: toggleSelection) {
+                                ZStack {
+                                    Circle()
+                                    //                                    .stroke(selectedAssets.contains(currentAsset) ? Color.blue : Color.white, lineWidth: 2)
+                                    //                                    .background(selectedAssets.contains(currentAsset) ? Color.blue : Color.clear)
+                                        .frame(width: 32, height: 32)
+                                    //
+                                    //                                if selectedAssets.contains(currentAsset) {
+                                    //                                    Image(systemName: "checkmark")
+                                    //                                        .foregroundColor(.white)
+                                    //                                        .font(.system(size: 18, weight: .bold))
+                                    //                                }
+                                }
+                                .padding()
+                            }
+                        } else {
+                            Button(action: { onEdit(currentAsset) }) {
+                                Image(systemName: "edit")
+                                    .foregroundColor(.white)
+                                    .font(.system(size: 24))
+                                    .padding()
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                
+                // 底部页码
+                VStack {
+                    Spacer()
+                    
+                    if fetchResult.count > 1 {
+                        Text("\(currentIndex + 1)/\(fetchResult.count)")
+                            .foregroundColor(.white)
+                            .font(.system(size: 16))
+                            .padding()
                     }
                 }
-                
-                Spacer()
             }
-            
-            // 底部页码
-            VStack {
-                Spacer()
-                
-                if assets.count > 1 {
-                    Text("\(currentIndex + 1)/\(assets.count)")
-                        .foregroundColor(.white)
-                        .font(.system(size: 16))
-                        .padding()
-                }
+            .onReceive([currentIndex].publisher) { _ in
+                // 重置缩放和偏移
+                scale = 1.0
+                offset = .zero
             }
-        }
-        .onReceive([currentIndex].publisher) { _ in
-            // 重置缩放和偏移
-            scale = 1.0
-            offset = .zero
         }
     }
     
     /// 当前显示的图片
     private var currentAsset: CMAsset {
-        return assets[currentIndex]
+        let phAsset = fetchResult.object(at: currentIndex)
+        return CMAsset(phAsset: phAsset!)
     }
     
     /// 切换选择状态
