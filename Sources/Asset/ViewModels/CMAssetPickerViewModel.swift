@@ -36,13 +36,20 @@ final class CMAssetPickerViewModel: ObservableObject {
     
     /// 加载相册中的图片
     /// - Parameter album: 相册
-    func loadAssets(in album: CMAssetCollection) {
-        viewState = .loading
-        Task {
-            do {
-                try await CMAssetManager.shared.getAssets(in: album)
+    func loadAssets(in album: CMAssetCollection) async {
+        print("load:", album.title)
+        await MainActor.run {
+            viewState = .loading
+        }
+        
+        do {
+            try await CMAssetManager.shared.getAssets(in: album)
+            await MainActor.run {
                 viewState = .assets
-            } catch {
+            }
+            
+        } catch {
+            await MainActor.run {
                 viewState = .error(message: "加载图片失败")
             }
         }

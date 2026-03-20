@@ -15,19 +15,29 @@ final class CMAlbumViewModel: ObservableObject {
     var pageControl: CMPickerViewController?
     
     /// 加载相册列表
-    func loadAlbums() {
+    func loadAlbums() async {
         pageControl?.loading()
-        
-        Task {
-            do {
-                albums = try await CMAssetManager.shared.getAlbums()
+        print("Asset: 加载相册")
+        do {
+            let allAlbums = try await CMAssetManager.shared.getAlbums()
+            await MainActor.run {
+                albums = allAlbums
                 if let firstAlbum = albums.first {
                     selectedAlbum = firstAlbum
                 }
                 pageControl?.showAssets()
-            } catch {
+                
+                print("Asset: 相册数量__", albums.count)
+                for item in allAlbums {
+                    print("Asset:", item.title)
+                }
+            }
+            
+        } catch {
+            await MainActor.run {
                 pageControl?.showError("加载相册失败")
             }
+            
         }
     }
 }

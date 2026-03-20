@@ -51,7 +51,9 @@ struct CMAssetContentView: View {
                 onSelectAlbum: { album in
                     albumViewModel.selectedAlbum = album
                     showAlbumList = false
-                    assetViewModel.loadAssets(in: album)
+                    Task {
+                        await assetViewModel.loadAssets(in: album)
+                    }
                 }
             )
         }

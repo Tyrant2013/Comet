@@ -46,12 +46,14 @@ struct CMAssetPickerView: View {
                 }
             case .error(let message):
                 ErrorView(message: message) {
-                    albumViewModel.loadAlbums()
+                    Task {
+                        await albumViewModel.loadAlbums()
+                    }
                 }
             case .loading:
                 LoadingView()
             case .assets:
-                VStack {
+                VStack(spacing: 0) {
                     // 顶部导航栏
                     NavigationBar(
                         title: selectedAlbum?.title ?? "相册",
@@ -62,41 +64,56 @@ struct CMAssetPickerView: View {
                     )
                     
                     // 内容区域
-                    ZStack {
-                        CMAssetGridView(
-                            assetFetchResult: CMAssetManager.shared.assetFetchResult,
-                            selectedAssets: $viewModel.selectedAssets,
-                            isMultiSelect: isMultiSelect,
-                            onAssetTap: { asset, rect in
-                                pageControl.showPreview = true
+                    CMAssetGridView(
+                        assetFetchResult: CMAssetManager.shared.assetFetchResult,
+                        selectedAssets: $viewModel.selectedAssets,
+                        isMultiSelect: isMultiSelect,
+                        onAssetTap: { asset, rect in
+                            pageControl.showPreview = true
+                        }
+                    )
+                    .padding(.horizontal, 6)
+                    .overlay(
+                        AlbumListView(
+                            albums: albums,
+                            selectedAlbum: $selectedAlbum,
+                            onSelectAlbum: { album in
+                                selectedAlbum = album
+                                pageControl.showAlbumList = false
+                                Task {
+                                    await viewModel.loadAssets(in: album)
+                                }
                             }
                         )
-                        .padding(.horizontal, 6)
-                        if pageControl.showAlbumList {
-                            AlbumListView(
-                                albums: albums,
-                                selectedAlbum: $selectedAlbum,
-                                onSelectAlbum: { album in
-                                    selectedAlbum = album
-                                    pageControl.showAlbumList = false
-                                    viewModel.loadAssets(in: album)
-                                }
-                            )
-                        }
-                    }
+                        .opacity(pageControl.showAlbumList ? 1 : 0)
+                    )
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                
-                if showEditView, let asset = currentEditAsset {
+                .fullScreenCover(isPresented: .init(get: {
+                    if showEditView , let asset = currentEditAsset {
+                        return true
+                    }
+                    return false
+                }, set: { _ in
+                    showEditView = false
+                }), content: {
                     HeroAnimationContainer(isVisible: $showEditView) {
                         CMAssetDetailView(
-                            asset: asset,
+                            asset: currentEditAsset!,
                             onDismiss: { showEditView = false },
                             onSave: { editedAsset in
                                 showEditView = false
                                 // 这里可以添加保存逻辑
                             }
                         )
+                    }
+                })
+                .onAppear {
+                    Task {
+                        await albumViewModel.loadAlbums()
+                        if let album = albumViewModel.albums.first {
+                            await viewModel.loadAssets(in: album)
+                        }
                     }
                 }
             }
@@ -171,7 +188,7 @@ struct NavigationBar: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(height: 44)
-        .background(Color.red)
+        .background(Color.white)
 //        .shadow(radius: 2)
     }
 }
