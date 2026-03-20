@@ -57,7 +57,7 @@ struct CMAssetPickerView: View {
                     // 内容区域
                     ZStack {
                         CMAssetGridView(
-                            assets: assets,
+                            assetFetchResult: CMAssetManager.shared.assetFetchResult,
                             selectedAssets: $selectedAssets,
                             isMultiSelect: isMultiSelect,
                             onAssetTap: { asset, rect in
@@ -68,6 +68,7 @@ struct CMAssetPickerView: View {
                                 showPreview = true
                             }
                         )
+                        .padding(.horizontal, 6)
                         if showAlbumList {
                             AlbumListView(
                                 albums: albums,
@@ -116,6 +117,7 @@ struct CMAssetPickerView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white.ignoresSafeArea())
+        .onAppear(perform: requestPermission)
     }
     
     /// 请求权限
@@ -152,7 +154,7 @@ struct CMAssetPickerView: View {
         isLoading = true
         Task {
             do {
-                assets = try await CMAssetManager.shared.getAssets(in: album)
+                try await CMAssetManager.shared.getAssets(in: album)
                 isLoading = false
             } catch {
                 errorMessage = "加载图片失败"

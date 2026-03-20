@@ -4,7 +4,8 @@ import Photos
 /// 图片网格视图
 struct CMAssetGridView: View {
     /// 图片列表
-    let assets: [CMAsset]
+//    let assets: [CMAsset]
+    let assetFetchResult: CMFetchResult<PHAsset>
     /// 选中的图片列表
     @Binding var selectedAssets: [CMAsset]
     /// 是否为多选模式
@@ -21,17 +22,20 @@ struct CMAssetGridView: View {
             let gridItemSize = gridWidth / CGFloat(columns)
             let itemHeight = gridItemSize
             LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridItemSize), spacing: spacing), count: columns), spacing: 1) {
-                ForEach(assets) { asset in
-                    CMAssetItemView(
-                        asset: asset,
-                        isSelected: selectedAssets.contains(asset),
-                        isMultiSelect: isMultiSelect,
-                        onTap: { rect in
-                            onAssetTap(asset, rect)
-                        }
-                    )
-                    .frame(width: gridItemSize, height: itemHeight)
-                    .clipShape(Rectangle())
+                ForEach((0..<assetFetchResult.count).enumerated(), id: \.offset) { index, _ in
+                    if let obj = assetFetchResult.object(at: index) {
+                        let asset = CMAsset(phAsset: obj)
+                        CMAssetItemView(
+                            asset: asset,
+                            isSelected: selectedAssets.contains(asset),
+                            isMultiSelect: isMultiSelect,
+                            onTap: { rect in
+                                onAssetTap(asset, rect)
+                            }
+                        )
+                        .frame(width: gridItemSize, height: itemHeight)
+                        .clipShape(Rectangle())
+                    }
                 }
             }
         }
@@ -132,7 +136,7 @@ struct CMAssetItemView: View {
 struct CMAssetGridView_Previews: PreviewProvider {
     static var previews: some View {
         CMAssetGridView(
-            assets: [],
+            assetFetchResult: CMFetchResult(result: PHFetchResult<PHAsset>()),
             selectedAssets: .constant([]),
             isMultiSelect: true,
             onAssetTap: { _, _ in }

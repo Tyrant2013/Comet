@@ -6,7 +6,7 @@ class CMAssetManager {
     /// 共享实例
     static let shared = CMAssetManager()
     
-    private var assetFetchResult: CMFetchResult<PHAsset>?
+    public var assetFetchResult: CMFetchResult<PHAsset> = CMFetchResult(result: nil)
     /// 私有初始化方法
     private init() {}
     
@@ -109,26 +109,16 @@ class CMAssetManager {
     /// 获取指定相册下的图片
     /// - Parameter album: 相册
     /// - Returns: 图片列表
-    func getAssets(in album: CMAssetCollection) async throws -> [CMAsset] {
+    func getAssets(in album: CMAssetCollection) async throws -> Void {
         guard getPermissionStatus() == .authorized else {
             throw CMAssetError.permissionDenied
         }
         
-        return try await withCheckedThrowingContinuation { continuation in
-            let fetchOptions = PHFetchOptions()
-            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            
-            let fetchResult = PHAsset.fetchAssets(in: album.phAssetCollection, options: fetchOptions)
-            self.assetFetchResult = CMFetchResult(result: fetchResult)
-            
-            var assets: [CMAsset] = []
-            
-            fetchResult.enumerateObjects { asset, _, _ in
-                assets.append(CMAsset(phAsset: asset))
-            }
-            
-            continuation.resume(returning: assets)
-        }
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        
+        let fetchResult = PHAsset.fetchAssets(in: album.phAssetCollection, options: fetchOptions)
+        self.assetFetchResult = CMFetchResult(result: fetchResult)
     }
     
     /// 使用Cursor机制获取图片（支持大量图片）
