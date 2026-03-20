@@ -17,10 +17,6 @@ struct CMAssetPickerView: View {
     @State private var selectedAlbum: CMAssetCollection?
     /// 图片列表
     @State private var assets: [CMAsset] = []
-//    /// 是否显示相册列表
-//    @State private var showAlbumList: Bool = true
-//    /// 是否显示预览
-//    @State private var showPreview: Bool = false
     /// 预览的图片索引
     @State private var previewIndex: Int = 0
     /// 是否显示编辑视图
@@ -73,22 +69,21 @@ struct CMAssetPickerView: View {
                         }
                     )
                     .padding(.horizontal, 6)
-                    .overlay(
-                        AlbumListView(
-                            albums: albums,
-                            selectedAlbum: $selectedAlbum,
-                            onSelectAlbum: { album in
-                                selectedAlbum = album
-                                pageControl.showAlbumList = false
-                                Task {
-                                    await viewModel.loadAssets(in: album)
-                                }
-                            }
-                        )
-                        .opacity(pageControl.showAlbumList ? 1 : 0)
-                    )
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .fullScreenCover(isPresented: $pageControl.showAlbumList, content: {
+                    AlbumListView(
+                        albums: albumViewModel.albums,
+                        selectedAlbum: $albumViewModel.selectedAlbum,
+                        onSelectAlbum: { album in
+                            albumViewModel.selectedAlbum = album
+                            pageControl.showAlbumList = false
+                            Task {
+                                await viewModel.loadAssets(in: album)
+                            }
+                        }
+                    )
+                })
                 .fullScreenCover(isPresented: .init(get: {
                     if showEditView , let asset = currentEditAsset {
                         return true
@@ -156,35 +151,37 @@ struct NavigationBar: View {
     
     @Environment(\.dismiss) var dismiss
     var body: some View {
-        HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .frame(width: 44, height: 44)
-            }
-            Button(action: { showAlbumList.toggle() }) {
-                Text(title)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
-                Image(systemName: "chevron.down")
-                    .foregroundColor(.black)
-            }
-            .frame(maxWidth: .infinity)
-            
-            if isMultiSelect {
-                Text("已选择 \(selectedCount) 项")
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
-            }
-            
-            Button(action: { isMultiSelect.toggle() }) {
-                Text(isMultiSelect ? "取消" : "选择")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.blue)
-                    .padding(.leading, 16)
-            }
+        Button(action: { showAlbumList.toggle() }) {
+            Text(title)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.black)
+            Image(systemName: "chevron.down")
+                .foregroundColor(.black)
         }
+        .frame(maxWidth: .infinity)
+        .overlay(
+            HStack(spacing: 0) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: 44, height: 44)
+                }
+                Spacer()
+                if isMultiSelect {
+                    Text("已选择 \(selectedCount) 项")
+                        .font(.system(size: 14))
+                        .foregroundColor(.gray)
+                }
+                
+                Button(action: { isMultiSelect.toggle() }) {
+                    Text(isMultiSelect ? "取消" : "选择")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.blue)
+                        .padding(.leading, 16)
+                }
+            }
+        )
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(height: 44)

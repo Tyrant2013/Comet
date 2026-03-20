@@ -18,7 +18,7 @@ enum CMAssetPickerViewState {
 final class CMPickerViewController: ObservableObject {
     @Published var viewState: CMAssetPickerViewState = .assets
     /// 是否显示相册列表
-    @Published var showAlbumList: Bool = true
+    @Published var showAlbumList: Bool = false
     /// 是否显示预览
     @Published var showPreview: Bool = false
     
