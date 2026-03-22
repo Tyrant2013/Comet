@@ -119,7 +119,8 @@ struct CMAssetPickerView: View {
         .fullScreenCover(isPresented: $pageControl.showPreview) {
             HeroAnimationContainer(isVisible: $pageControl.showPreview) {
                 CMAssetPreviewView(
-                    assets: $assets,
+//                    assets: $assets,
+                    assetFetchResult: CMAssetManager.shared.assetFetchResult,
                     initialIndex: previewIndex,
                     selectedAssets: $viewModel.selectedAssets,
                     isMultiSelect: isMultiSelect,
