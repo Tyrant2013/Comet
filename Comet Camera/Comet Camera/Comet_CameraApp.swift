@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import Asset
 
 @main
 struct Comet_CameraApp: App {
@@ -14,7 +15,8 @@ struct Comet_CameraApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CMAssetPickerView()
+//            ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }

@@ -3,7 +3,7 @@ import SwiftUI
 
 
 /// 相册选择器主视图
-struct CMAssetPickerView: View {
+public struct CMAssetPickerView: View {
     @StateObject var pageControl = CMPickerViewController()
     @StateObject var albumViewModel: CMAlbumViewModel = CMAlbumViewModel()
     @StateObject var viewModel: CMAssetPickerViewModel = CMAssetPickerViewModel()
@@ -32,7 +32,9 @@ struct CMAssetPickerView: View {
     /// 预览动画的起始帧
     @State private var previewStartFrame: CGRect = .zero
     
-    var body: some View {
+    public init() { }
+    
+    public var body: some View {
         
         ZStack {
             switch pageControl.viewState {
