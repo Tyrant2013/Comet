@@ -11,7 +11,7 @@ struct CMAssetGridView: View {
     /// 是否为多选模式
     let isMultiSelect: Bool
     /// 图片点击回调
-    let onAssetTap: (CMAsset, CGRect) -> Void
+    let onAssetTap: (CMAsset, CGRect, Int) -> Void
     /// 列数
     let columns: Int = 3
     
@@ -30,7 +30,7 @@ struct CMAssetGridView: View {
                             CMAssetItemView(
                                 asset: asset,
                                 onTap: { rect in
-                                    onAssetTap(asset, rect)
+                                    onAssetTap(asset, rect, index)
                                 }
                             )
                             .frame(width: gridItemSize, height: itemHeight)
@@ -159,7 +159,7 @@ struct CMAssetGridView_Previews: PreviewProvider {
             assetFetchResult: CMFetchResult(result: PHFetchResult<PHAsset>()),
             selectedAssets: .constant([]),
             isMultiSelect: true,
-            onAssetTap: { _, _ in }
+            onAssetTap: { _, _, _ in }
         )
     }
 }

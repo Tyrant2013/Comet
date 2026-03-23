@@ -66,7 +66,8 @@ public struct CMAssetPickerView: View {
                         assetFetchResult: CMAssetManager.shared.assetFetchResult,
                         selectedAssets: $viewModel.selectedAssets,
                         isMultiSelect: isMultiSelect,
-                        onAssetTap: { asset, rect in
+                        onAssetTap: { asset, rect, index in
+                            previewIndex = index
                             pageControl.showPreview = true
                         }
                     )
@@ -119,21 +120,18 @@ public struct CMAssetPickerView: View {
         .background(Color.white.ignoresSafeArea())
         // 预览和编辑视图
         .fullScreenCover(isPresented: $pageControl.showPreview) {
-            HeroAnimationContainer(isVisible: $pageControl.showPreview) {
-                CMAssetPreviewView(
-//                    assets: $assets,
-                    assetFetchResult: CMAssetManager.shared.assetFetchResult,
-                    initialIndex: previewIndex,
-                    selectedAssets: $viewModel.selectedAssets,
-                    isMultiSelect: isMultiSelect,
-                    onDismiss: { pageControl.showPreview = false },
-                    onEdit: { asset in
-                        pageControl.showPreview = false
-                        currentEditAsset = asset
-                        showEditView = true
-                    }
-                )
-            }
+            CMAssetPreviewView(
+                assetFetchResult: CMAssetManager.shared.assetFetchResult,
+                initialIndex: previewIndex,
+                selectedAssets: $viewModel.selectedAssets,
+                isMultiSelect: isMultiSelect,
+                onDismiss: { pageControl.showPreview = false },
+                onEdit: { asset in
+                    pageControl.showPreview = false
+                    currentEditAsset = asset
+                    showEditView = true
+                }
+            )
         }
     }
 }

@@ -25,6 +25,8 @@ struct CMAssetPreviewView: View {
     /// 是否正在拖动
     @State private var isDragging: Bool = false
     
+    @Environment(\.dismiss) var dismiss
+    @State private var showImageInfo = false
     init(
         assetFetchResult: CMFetchResult<PHAsset>,
         initialIndex: Int,
@@ -46,7 +48,6 @@ struct CMAssetPreviewView: View {
     var body: some View {
         GeometryReader { geometry in
             TabView(selection: $currentIndex) {
-                //                    ForEach(assets.indices, id: \.self) { index in
                 ForEach(0..<fetchResult.count, id: \.self) { index in
                     if let phAsset = fetchResult.object(at: index) {
                         let asset = CMAsset(phAsset: phAsset)
@@ -60,7 +61,6 @@ struct CMAssetPreviewView: View {
                         .tag(index)
                     }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .gesture(
                     DragGesture(minimumDistance: 50, coordinateSpace: .global)
                         .onEnded { value in
@@ -72,64 +72,50 @@ struct CMAssetPreviewView: View {
                         }
                 )
             }
-            
-            // 顶部工具栏
-            VStack {
-                HStack {
-                    Button(action: onDismiss) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.white)
-                            .font(.system(size: 24))
-                            .padding()
-                    }
-                    
-                    Spacer()
-                    
-                    if isMultiSelect {
-                        Button(action: toggleSelection) {
-                            ZStack {
-                                Circle()
-                                //                                    .stroke(selectedAssets.contains(currentAsset) ? Color.blue : Color.white, lineWidth: 2)
-                                //                                    .background(selectedAssets.contains(currentAsset) ? Color.blue : Color.clear)
-                                    .frame(width: 32, height: 32)
-                                //
-                                //                                if selectedAssets.contains(currentAsset) {
-                                //                                    Image(systemName: "checkmark")
-                                //                                        .foregroundColor(.white)
-                                //                                        .font(.system(size: 18, weight: .bold))
-                                //                                }
-                            }
-                            .padding()
-                        }
-                    } else {
-                        Button(action: { onEdit(currentAsset) }) {
-                            Image(systemName: "edit")
-                                .foregroundColor(.white)
-                                .font(.system(size: 24))
-                                .padding()
-                        }
-                    }
-                }
-                
-                Spacer()
-            }
-            
-            // 底部页码
-            VStack {
-                Spacer()
-                
-                if fetchResult.count > 1 {
-                    Text("\(currentIndex + 1)/\(fetchResult.count)")
-                        .foregroundColor(.white)
-                        .font(.system(size: 16))
-                        .padding()
-                }
-            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .background(
             Color.black
                 .ignoresSafeArea()
         )
+        .overlay(
+            HStack(spacing: 0) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .frame(width: 44, height: 44)
+                }
+                Spacer()
+                Button(action: { showImageInfo.toggle() }) {
+                    Image(systemName: "questionmark")
+                        .frame(width: 44, height: 44)
+                }
+            }
+            .font(.system(size: 18, weight: .medium))
+            .foregroundStyle(.white)
+            .frame(height: 44)
+            .background(Color.black.ignoresSafeArea())
+            , alignment: .top
+        )
+        .overlay(
+            VStack(spacing: 0) {
+                
+            }
+            .frame(height: 400)
+            .frame(maxWidth: .infinity)
+            .background(.thinMaterial)
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(lineWidth: 2)
+                    .foregroundStyle(Color.white)
+            )
+            .padding(.horizontal, 2)
+            .padding(.bottom, 30)
+            .offset(y: showImageInfo ? 0 : 500)
+            , alignment: .bottom
+        )
+        .animation(.default, value: showImageInfo)
         .onReceive([currentIndex].publisher) { _ in
             // 重置缩放和偏移
             scale = 1.0
@@ -170,51 +156,49 @@ struct CMAssetPreviewItemView: View {
     
     var body: some View {
         ZStack {
-            if let image = image {
+            Color.gray.opacity(0.3)
+            if let image = asset.image {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .scaleEffect(scale)
-                    .offset(offset)
-                    .hero(id: asset.id)
-                    .gesture(
-                        MagnificationGesture()
-                            .onChanged { value in
-                                scale = max(1.0, min(value, 3.0))
-                            }
-                    )
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                if scale > 1.0 {
-                                    offset = value.translation
-                                    isDragging = true
-                                }
-                            }
-                            .onEnded { _ in
-                                isDragging = false
-                            }
-                    )
-                    .simultaneousGesture(
-                        TapGesture(count: 2)
-                            .onEnded { _ in
-                                if scale > 1.0 {
-                                    withAnimation {
-                                        scale = 1.0
-                                        offset = .zero
-                                    }
-                                } else {
-                                    scale = 2.0
-                                }
-                            }
-                    )
-            } else {
-                Color.gray.opacity(0.3)
+//                    .scaleEffect(scale)
+//                    .offset(offset)
+//                    .gesture(
+//                        MagnificationGesture()
+//                            .onChanged { value in
+//                                scale = max(1.0, min(value, 3.0))
+//                            }
+//                    )
+//                    .gesture(
+//                        DragGesture()
+//                            .onChanged { value in
+//                                if scale > 1.0 {
+//                                    offset = value.translation
+//                                    isDragging = true
+//                                }
+//                            }
+//                            .onEnded { _ in
+//                                isDragging = false
+//                            }
+//                    )
+//                    .simultaneousGesture(
+//                        TapGesture(count: 2)
+//                            .onEnded { _ in
+//                                if scale > 1.0 {
+//                                    withAnimation {
+//                                        scale = 1.0
+//                                        offset = .zero
+//                                    }
+//                                } else {
+//                                    scale = 2.0
+//                                }
+//                            }
+//                    )
             }
         }
-        .onAppear {
-            loadImage()
-        }
+//        .onAppear {
+//            loadImage()
+//        }
     }
     
     /// 加载图片

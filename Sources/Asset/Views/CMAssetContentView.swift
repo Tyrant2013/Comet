@@ -32,7 +32,7 @@ struct CMAssetContentView: View {
                     assetFetchResult: CMAssetManager.shared.assetFetchResult,
                     selectedAssets: $selectedAssets,
                     isMultiSelect: isMultiSelect,
-                    onAssetTap: { asset, rect in
+                    onAssetTap: { asset, rect, index in
 //                                previewStartFrame = rect
 //                                if let index = assets.firstIndex(where: { $0.id == asset.id }) {
 //                                    previewIndex = index
