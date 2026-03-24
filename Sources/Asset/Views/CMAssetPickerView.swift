@@ -120,17 +120,9 @@ public struct CMAssetPickerView: View {
         .background(Color.white.ignoresSafeArea())
         // 预览和编辑视图
         .fullScreenCover(isPresented: $pageControl.showPreview) {
-            CMAssetPreviewView(
-                assetFetchResult: CMAssetManager.shared.assetFetchResult,
-                initialIndex: previewIndex,
-                selectedAssets: $viewModel.selectedAssets,
-                isMultiSelect: isMultiSelect,
-                onDismiss: { pageControl.showPreview = false },
-                onEdit: { asset in
-                    pageControl.showPreview = false
-                    currentEditAsset = asset
-                    showEditView = true
-                }
+            CMPhotoPreview(
+                fetchResult: CMAssetManager.shared.assetFetchResult,
+                index: $previewIndex
             )
         }
     }

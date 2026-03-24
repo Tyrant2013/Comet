@@ -23,7 +23,7 @@ struct CMAssetGridView: View {
             let itemHeight = gridItemSize
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridItemSize), spacing: spacing), count: columns), spacing: 1) {
-                    ForEach((0..<assetFetchResult.count).enumerated(), id: \.offset) { index, _ in
+                    ForEach(0..<assetFetchResult.count, id: \.self) { index in
                         if let obj = assetFetchResult.object(at: index) {
                             let asset = CMAsset(phAsset: obj)
                             let isSelected = selectedAssets.contains(asset)
