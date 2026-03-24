@@ -33,7 +33,7 @@ let package = Package(
         .target(
             name: "PhotoEditor", path: "Sources/PhotoEditor"),
         .target(
-            name: "Asset", dependencies: ["PhotoEditor"], path: "Sources/Asset"),
+            name: "Asset", dependencies: ["PhotoEditor"], path: "Sources/Asset", resources: [.process("Res")]),
         .executableTarget(name: "CometDemo", dependencies: ["Comet"], path: "CometDemo/CometDemo"),
         // .executableTarget(name: "Comet_Camera", dependencies: ["Comet"], path: "Comet Camera/Comet Camera"),
         .testTarget(

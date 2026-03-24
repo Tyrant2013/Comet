@@ -446,7 +446,7 @@ class SubjectExtractionDemoViewController: UIViewController {
         view.backgroundColor = .systemBackground
         
         // 设置图片
-        imageView.image = UIImage(named: "sample_photo") // 替换为你的图片
+        imageView.image = UIImage(named: "abc.jpg", in: .module, with: nil)
         imageView.translatesAutoresizingMaskIntoConstraints = false
         
         view.addSubview(imageView)
@@ -538,5 +538,29 @@ class SubjectExtractionDemoViewController: UIViewController {
         let alert = UIAlertController(title: "未检测到主体", message: "请尝试长按图片中的主要物体", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "确定", style: .default))
         present(alert, animated: true)
+    }
+}
+
+
+import SwiftUI
+
+@available(iOS 17.0, *)
+struct SubjectView: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> SubjectExtractionDemoViewController {
+        let vc = SubjectExtractionDemoViewController()
+        
+        return vc
+    }
+    
+    func updateUIViewController(_ uiViewController: SubjectExtractionDemoViewController, context: Context) {
+        
+    }
+}
+
+#Preview {
+    if #available(iOS 17.0, *) {
+        SubjectView()
+    } else {
+        // Fallback on earlier versions
     }
 }
