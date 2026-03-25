@@ -446,7 +446,7 @@ class SubjectExtractionDemoViewController: UIViewController {
         view.backgroundColor = .systemBackground
         
         // 设置图片
-        imageView.image = UIImage(named: "abc.jpg", in: .module, with: nil)
+        imageView.image = UIImage(named: "ddd.jpg", in: .module, with: nil)
         imageView.translatesAutoresizingMaskIntoConstraints = false
         
         view.addSubview(imageView)
