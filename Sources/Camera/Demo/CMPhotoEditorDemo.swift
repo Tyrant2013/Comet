@@ -369,37 +369,42 @@ public struct CMPhotoEditorDemo: View {
     }
 
     private static func makeSampleImage() -> UIImage {
-        let size = CGSize(width: 1200, height: 800)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { ctx in
-            UIColor.black.setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
-
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.alignment = .left
-
-            let titleAttrs: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 68, weight: .bold),
-                .foregroundColor: UIColor.white,
-                .paragraphStyle: paragraph
-            ]
-            let bodyAttrs: [NSAttributedString.Key: Any] = [
-                .font: UIFont.monospacedSystemFont(ofSize: 38, weight: .medium),
-                .foregroundColor: UIColor.systemYellow,
-                .paragraphStyle: paragraph
-            ]
-
-            "Comet PhotoEditor Demo".draw(in: CGRect(x: 50, y: 70, width: 1050, height: 100), withAttributes: titleAttrs)
-            "Email: demo.user@example.com".draw(in: CGRect(x: 50, y: 210, width: 1000, height: 60), withAttributes: bodyAttrs)
-            "Card: 1234567890123456".draw(in: CGRect(x: 50, y: 280, width: 1000, height: 60), withAttributes: bodyAttrs)
-            "SSN: 123-45-6789".draw(in: CGRect(x: 50, y: 350, width: 1000, height: 60), withAttributes: bodyAttrs)
-
-            UIColor.systemBlue.setFill()
-            ctx.fill(CGRect(x: 50, y: 460, width: 280, height: 220))
-            UIColor.systemPink.setFill()
-            ctx.fill(CGRect(x: 360, y: 460, width: 280, height: 220))
-            UIColor.systemGreen.setFill()
-            ctx.fill(CGRect(x: 670, y: 460, width: 280, height: 220))
+        if let image = UIImage(named: "abc.jpg", in: .module, with: nil) {
+            return image
+        }
+        else {
+            let size = CGSize(width: 1200, height: 800)
+            let renderer = UIGraphicsImageRenderer(size: size)
+            return renderer.image { ctx in
+                UIColor.black.setFill()
+                ctx.fill(CGRect(origin: .zero, size: size))
+                
+                let paragraph = NSMutableParagraphStyle()
+                paragraph.alignment = .left
+                
+                let titleAttrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 68, weight: .bold),
+                    .foregroundColor: UIColor.white,
+                    .paragraphStyle: paragraph
+                ]
+                let bodyAttrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.monospacedSystemFont(ofSize: 38, weight: .medium),
+                    .foregroundColor: UIColor.systemYellow,
+                    .paragraphStyle: paragraph
+                ]
+                
+                "Comet PhotoEditor Demo".draw(in: CGRect(x: 50, y: 70, width: 1050, height: 100), withAttributes: titleAttrs)
+                "Email: demo.user@example.com".draw(in: CGRect(x: 50, y: 210, width: 1000, height: 60), withAttributes: bodyAttrs)
+                "Card: 1234567890123456".draw(in: CGRect(x: 50, y: 280, width: 1000, height: 60), withAttributes: bodyAttrs)
+                "SSN: 123-45-6789".draw(in: CGRect(x: 50, y: 350, width: 1000, height: 60), withAttributes: bodyAttrs)
+                
+                UIColor.systemBlue.setFill()
+                ctx.fill(CGRect(x: 50, y: 460, width: 280, height: 220))
+                UIColor.systemPink.setFill()
+                ctx.fill(CGRect(x: 360, y: 460, width: 280, height: 220))
+                UIColor.systemGreen.setFill()
+                ctx.fill(CGRect(x: 670, y: 460, width: 280, height: 220))
+            }
         }
     }
 }
