@@ -9,7 +9,7 @@ import SwiftUI
 import CoreData
 import Asset
 
-@main
+//@main
 struct Comet_CameraApp: App {
     let persistenceController = PersistenceController.shared
 

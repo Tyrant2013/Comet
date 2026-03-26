@@ -501,8 +501,8 @@ struct ResizableHoleView: View {
                     // 固定右上角，调整左下角
                     let minHeight = minSize
                     let maxHeight = imageFrame.maxY - startRect.origin.y
-                    let minWidth = minSize
-                    let maxWidth = imageFrame.maxX - startRect.origin.x // 实际上右边固定，所以这是错的
+//                    let minWidth = minSize
+//                    let maxWidth = imageFrame.maxX - startRect.origin.x // 实际上右边固定，所以这是错的
                     
                     // 重新思考：固定右上角意味着右边和上边不动
                     let newOriginX = min(startRect.origin.x + deltaX, startRect.maxX - minSize)
