@@ -250,18 +250,11 @@ public final class CMCropToolbar: UIView {
             var origin = horizontally ? CGPoint(x: diffOffset, y: sameOffset) : CGPoint(x: sameOffset, y: diffOffset)
             if horizontally {
                 origin.x += containerRect.minX
-                if #available(iOS 15.0, *) {
-                    var config = button.configuration ?? .plain()
-                    config.imagePlacement = .leading
-                    config.imagePadding = 8
-                    if let image = button.imageView?.image {
-                        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: image.baselineOffsetFromBottom ?? 0, trailing: 0)
-                    }
-                    button.configuration = config
-                } else if #available(iOS 13.0, *) {
-                    if let image = button.imageView?.image {
-                        button.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: image.baselineOffsetFromBottom ?? 0, right: 0)
-                    }
+                var config = button.configuration ?? .plain()
+                config.imagePlacement = .leading
+                config.imagePadding = 8
+                if let image = button.imageView?.image {
+                    config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: image.baselineOffsetFromBottom ?? 0, trailing: 0)
                 }
             } else {
                 origin.y += containerRect.minY
