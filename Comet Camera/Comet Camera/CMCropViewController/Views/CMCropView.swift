@@ -115,6 +115,7 @@ public final class CMCropView: UIView, UIScrollViewDelegate, UIGestureRecognizer
     }
 
     public var cropViewPadding: CGFloat = kCMCropViewPadding
+    // 裁剪自适应延时
     public var cropAdjustingDelay: TimeInterval = kCMCropTimerDuration
     public var minimumAspectRatio: CGFloat = 0.0
     public var maximumZoomScale: CGFloat = kCMMaximumZoomScale
@@ -450,8 +451,8 @@ public final class CMCropView: UIView, UIScrollViewDelegate, UIGestureRecognizer
         size.width = floor(size.width)
         size.height = floor(size.height)
         scrollView.contentSize = size
-
-        scrollView.zoomScale = scrollView.zoomScale
+        
+        scrollView.zoomScale = max(scrollView.minimumZoomScale, scrollView.zoomScale)
         matchForegroundToBackground()
     }
 
@@ -539,19 +540,24 @@ public final class CMCropView: UIView, UIScrollViewDelegate, UIGestureRecognizer
         let point = recognizer.location(in: self)
 
         if recognizer.state == .began {
+            // 状态切换
             startEditing()
+            // 手势开始的点
             panOriginPoint = point
+            // 保存手势开始时的裁剪Frame
             cropOriginFrame = cropBoxFrame
+            // 移动的边
             tappedEdge = cropEdgeForPoint(panOriginPoint)
         }
 
         if recognizer.state == .ended {
+            // 停止拖动后
             startResetTimer()
         }
 
         updateCropBoxFrameWithGesturePoint(point)
     }
-
+    /// 更新裁剪框的Frame
     private func updateCropBoxFrameWithGesturePoint(_ point: CGPoint) {
         var frame = cropBoxFrame
         let originFrame = cropOriginFrame
@@ -736,11 +742,14 @@ public final class CMCropView: UIView, UIScrollViewDelegate, UIGestureRecognizer
             frame.size.height = min(frame.height, maxHeight)
         }
 
+        /// 限制最小值
         frame.size.width = max(frame.width, minSize.width)
         frame.size.height = max(frame.height, minSize.height)
+        /// 限制最大值
         frame.size.width = min(frame.width, maxSize.width)
         frame.size.height = min(frame.height, maxSize.height)
 
+        /// 限制位置的极值
         frame.origin.x = max(frame.origin.x, contentFrame.minX)
         frame.origin.x = min(frame.origin.x, contentFrame.maxX - minSize.width)
         frame.origin.y = max(frame.origin.y, contentFrame.minY)
@@ -756,23 +765,24 @@ public final class CMCropView: UIView, UIScrollViewDelegate, UIGestureRecognizer
         setCropBoxFrameInternal(frame)
         checkForCanReset()
     }
-
+    /// 剪裁完成后的调整
     @objc private func timerTriggered() {
         setEditing(false, resetCropBox: true, animated: true)
         resetTimer?.invalidate()
         resetTimer = nil
     }
-
+    /// 准备自适应
     private func startResetTimer() {
         if resetTimer != nil { return }
         resetTimer = Timer.scheduledTimer(timeInterval: cropAdjustingDelay, target: self, selector: #selector(timerTriggered), userInfo: nil, repeats: false)
     }
-
+    /// 取消自适应
     private func cancelResetTimer() {
         resetTimer?.invalidate()
         resetTimer = nil
     }
 
+    /// 确定当前是移动哪条边
     private func cropEdgeForPoint(_ point: CGPoint) -> CMCropViewOverlayEdge {
         let frame = cropBoxFrame.insetBy(dx: -32.0, dy: -32.0)
 
@@ -862,11 +872,12 @@ public final class CMCropView: UIView, UIScrollViewDelegate, UIGestureRecognizer
         }
     }
 
+    /// 开始编辑
     private func startEditing() {
         cancelResetTimer()
         setEditing(true, resetCropBox: false, animated: true)
     }
-
+    /// 开始编辑时的控件状态设置
     private func setEditing(_ editing: Bool, resetCropBox: Bool, animated: Bool) {
         if editing == self.editing { return }
         self.editing = editing
