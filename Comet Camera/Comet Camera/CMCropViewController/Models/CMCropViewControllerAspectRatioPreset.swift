@@ -18,13 +18,11 @@ public final class CMCropViewControllerAspectRatioPreset: NSObject {
     }
 
     public static func portraitPresets() -> [CMCropViewControllerAspectRatioPreset] {
-        let object = CMCropViewControllerAspectRatioPreset(size: .zero, title: "Original")
-        let resourceBundle = CM_CROP_VIEW_RESOURCE_BUNDLE_FOR_OBJECT(object)
+        let object = CMCropViewControllerAspectRatioPreset(size: .zero, title: "原始")
+//        let resourceBundle = CM_CROP_VIEW_RESOURCE_BUNDLE_FOR_OBJECT(object)
         return [
-            CMCropViewControllerAspectRatioPreset(size: .zero,
-                                                  title: NSLocalizedString("Original", tableName: "TOCropViewControllerLocalizable", bundle: resourceBundle, value: "Original", comment: "")),
-            CMCropViewControllerAspectRatioPreset(size: CGSize(width: 1.0, height: 1.0),
-                                                  title: NSLocalizedString("Square", tableName: "TOCropViewControllerLocalizable", bundle: resourceBundle, value: "Square", comment: "")),
+            object,
+            CMCropViewControllerAspectRatioPreset(size: CGSize(width: 1.0, height: 1.0), title: "1:1"),
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 2.0, height: 3.0), title: "2:3"),
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 3.0, height: 5.0), title: "3:5"),
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 3.0, height: 4.0), title: "3:4"),
@@ -35,13 +33,11 @@ public final class CMCropViewControllerAspectRatioPreset: NSObject {
     }
 
     public static func landscapePresets() -> [CMCropViewControllerAspectRatioPreset] {
-        let object = CMCropViewControllerAspectRatioPreset(size: .zero, title: "Original")
-        let resourceBundle = CM_CROP_VIEW_RESOURCE_BUNDLE_FOR_OBJECT(object)
+        let object = CMCropViewControllerAspectRatioPreset(size: .zero, title: "原始")
+//        let resourceBundle = CM_CROP_VIEW_RESOURCE_BUNDLE_FOR_OBJECT(object)
         return [
-            CMCropViewControllerAspectRatioPreset(size: .zero,
-                                                  title: NSLocalizedString("Original", tableName: "TOCropViewControllerLocalizable", bundle: resourceBundle, value: "Original", comment: "")),
-            CMCropViewControllerAspectRatioPreset(size: CGSize(width: 1.0, height: 1.0),
-                                                  title: NSLocalizedString("Square", tableName: "TOCropViewControllerLocalizable", bundle: resourceBundle, value: "Square", comment: "")),
+            object,
+            CMCropViewControllerAspectRatioPreset(size: CGSize(width: 1.0, height: 1.0), title: "1:1"),
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 3.0, height: 2.0), title: "3:2"),
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 5.0, height: 3.0), title: "5:3"),
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 4.0, height: 3.0), title: "4:3"),
