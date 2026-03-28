@@ -117,9 +117,7 @@ public final class CMCropToolbar: UIView {
 
         reverseContentLayout = UIView.userInterfaceLayoutDirection(for: semanticContentAttribute) == .rightToLeft
 
-        let bundle = CM_CROP_VIEW_RESOURCE_BUNDLE_FOR_OBJECT(self)
-
-        doneTextButtonTitle = NSLocalizedString("Done", tableName: "TOCropViewControllerLocalizable", bundle: bundle, value: "Done", comment: "")
+        doneTextButtonTitle = "完成"
         doneTextButton.setTitle(doneTextButtonTitle, for: .normal)
         doneTextButton.setTitleColor(UIColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0), for: .normal)
         if #available(iOS 13.0, *) {
@@ -131,47 +129,47 @@ public final class CMCropToolbar: UIView {
         doneTextButton.sizeToFit()
         addSubview(doneTextButton)
 
-        doneIconButton.setImage(Self.doneImage(), for: .normal)
+        doneIconButton.setImage(.doneImage, for: .normal)
         doneIconButton.tintColor = UIColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0)
         doneIconButton.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
         addSubview(doneIconButton)
         doneButtonColor = nil
 
-        cancelTextButtonTitle = NSLocalizedString("Cancel", tableName: "TOCropViewControllerLocalizable", bundle: bundle, value: "Cancel", comment: "")
+        cancelTextButtonTitle = "取消"
         cancelTextButton.setTitle(cancelTextButtonTitle, for: .normal)
         cancelTextButton.titleLabel?.font = .systemFont(ofSize: 17.0)
         cancelTextButton.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
         cancelTextButton.sizeToFit()
         addSubview(cancelTextButton)
 
-        cancelIconButton.setImage(Self.cancelImage(), for: .normal)
+        cancelIconButton.setImage(.cancelImage, for: .normal)
         cancelIconButton.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
         addSubview(cancelIconButton)
 
         clampButton.contentMode = .center
         clampButton.tintColor = .white
-        clampButton.setImage(Self.clampImage(), for: .normal)
+        clampButton.setImage(.clampImage, for: .normal)
         clampButton.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
         addSubview(clampButton)
 
         rotateCounterclockwiseButton.contentMode = .center
         rotateCounterclockwiseButton.tintColor = .white
-        rotateCounterclockwiseButton.setImage(Self.rotateCCWImage(), for: .normal)
+        rotateCounterclockwiseButton.setImage(.rotateCCWImage, for: .normal)
         rotateCounterclockwiseButton.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
         addSubview(rotateCounterclockwiseButton)
 
         rotateClockwiseButton?.contentMode = .center
         rotateClockwiseButton?.tintColor = .white
-        rotateClockwiseButton?.setImage(Self.rotateCWImage(), for: .normal)
+        rotateClockwiseButton?.setImage(.rotateCWImage, for: .normal)
         rotateClockwiseButton?.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
         if let rotateClockwiseButton { addSubview(rotateClockwiseButton) }
 
         resetButton.contentMode = .center
         resetButton.tintColor = .white
         resetButton.isEnabled = false
-        resetButton.setImage(Self.resetImage(), for: .normal)
+        resetButton.setImage(.resetImage, for: .normal)
         resetButton.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
-        resetButton.accessibilityLabel = NSLocalizedString("Reset", tableName: "TOCropViewControllerLocalizable", bundle: bundle, value: "Reset", comment: "")
+        resetButton.accessibilityLabel = "重置"
         addSubview(resetButton)
     }
 
@@ -286,134 +284,6 @@ public final class CMCropToolbar: UIView {
         }
         if button == clampButton {
             clampButtonTapped?()
-        }
-    }
-
-    private static func doneImage() -> UIImage? {
-        if #available(iOS 13.0, *) {
-            return UIImage(systemName: "checkmark",
-                           withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))
-        }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 17, height: 14))
-        return renderer.image { _ in
-            let path = UIBezierPath()
-            path.move(to: CGPoint(x: 1, y: 7))
-            path.addLine(to: CGPoint(x: 6, y: 12))
-            path.addLine(to: CGPoint(x: 16, y: 1))
-            UIColor.white.setStroke()
-            path.lineWidth = 2
-            path.stroke()
-        }
-    }
-
-    private static func cancelImage() -> UIImage? {
-        if #available(iOS 13.0, *) {
-            return UIImage(systemName: "xmark",
-                           withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))
-        }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 16, height: 16))
-        return renderer.image { _ in
-            let p1 = UIBezierPath()
-            p1.move(to: CGPoint(x: 15, y: 15))
-            p1.addLine(to: CGPoint(x: 1, y: 1))
-            UIColor.white.setStroke()
-            p1.lineWidth = 2
-            p1.stroke()
-
-            let p2 = UIBezierPath()
-            p2.move(to: CGPoint(x: 1, y: 15))
-            p2.addLine(to: CGPoint(x: 15, y: 1))
-            UIColor.white.setStroke()
-            p2.lineWidth = 2
-            p2.stroke()
-        }
-    }
-
-    private static func rotateCCWImage() -> UIImage? {
-        if #available(iOS 13.0, *) {
-            return UIImage(systemName: "rotate.left.fill",
-                           withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))?.withBaselineOffset(fromBottom: 4)
-        }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 18, height: 21))
-        return renderer.image { _ in
-            UIColor.white.setFill()
-            UIBezierPath(rect: CGRect(x: 0, y: 9, width: 12, height: 12)).fill()
-
-            let tri = UIBezierPath()
-            tri.move(to: CGPoint(x: 5, y: 3))
-            tri.addLine(to: CGPoint(x: 10, y: 6))
-            tri.addLine(to: CGPoint(x: 10, y: 0))
-            tri.close()
-            tri.fill()
-
-            let arc = UIBezierPath()
-            arc.move(to: CGPoint(x: 10, y: 3))
-            arc.addCurve(to: CGPoint(x: 17.5, y: 11),
-                         controlPoint1: CGPoint(x: 15, y: 3),
-                         controlPoint2: CGPoint(x: 17.5, y: 5.91))
-            arc.lineWidth = 1
-            arc.stroke()
-        }
-    }
-
-    private static func rotateCWImage() -> UIImage? {
-        guard let ccw = rotateCCWImage(), let cg = ccw.cgImage else { return nil }
-        let renderer = UIGraphicsImageRenderer(size: ccw.size)
-        return renderer.image { context in
-            let cgctx = context.cgContext
-            cgctx.translateBy(x: ccw.size.width, y: ccw.size.height)
-            cgctx.rotate(by: .pi)
-            cgctx.draw(cg, in: CGRect(origin: .zero, size: ccw.size))
-        }
-    }
-
-    private static func resetImage() -> UIImage? {
-        if #available(iOS 13.0, *) {
-            return UIImage(systemName: "arrow.counterclockwise",
-                           withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))?.withBaselineOffset(fromBottom: 0)
-        }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 22, height: 18))
-        return renderer.image { _ in
-            UIColor.white.setFill()
-            let p = UIBezierPath()
-            p.move(to: CGPoint(x: 22, y: 9))
-            p.addCurve(to: CGPoint(x: 13, y: 18), controlPoint1: CGPoint(x: 22, y: 13.97), controlPoint2: CGPoint(x: 17.97, y: 18))
-            p.addCurve(to: CGPoint(x: 13, y: 16), controlPoint1: CGPoint(x: 13, y: 17.35), controlPoint2: CGPoint(x: 13, y: 16.68))
-            p.addCurve(to: CGPoint(x: 20, y: 9), controlPoint1: CGPoint(x: 16.87, y: 16), controlPoint2: CGPoint(x: 20, y: 12.87))
-            p.addCurve(to: CGPoint(x: 13, y: 2), controlPoint1: CGPoint(x: 20, y: 5.13), controlPoint2: CGPoint(x: 16.87, y: 2))
-            p.addCurve(to: CGPoint(x: 6.55, y: 6.27), controlPoint1: CGPoint(x: 10.1, y: 2), controlPoint2: CGPoint(x: 7.62, y: 3.76))
-            p.addCurve(to: CGPoint(x: 6, y: 9), controlPoint1: CGPoint(x: 6.2, y: 7.11), controlPoint2: CGPoint(x: 6, y: 8.03))
-            p.addLine(to: CGPoint(x: 4, y: 9))
-            p.addCurve(to: CGPoint(x: 4.65, y: 5.63), controlPoint1: CGPoint(x: 4, y: 7.81), controlPoint2: CGPoint(x: 4.23, y: 6.67))
-            p.addCurve(to: CGPoint(x: 7.65, y: 1.76), controlPoint1: CGPoint(x: 5.28, y: 4.08), controlPoint2: CGPoint(x: 6.32, y: 2.74))
-            p.addCurve(to: CGPoint(x: 13, y: 0), controlPoint1: CGPoint(x: 9.15, y: 0.65), controlPoint2: CGPoint(x: 11, y: 0))
-            p.addCurve(to: CGPoint(x: 22, y: 9), controlPoint1: CGPoint(x: 17.97, y: 0), controlPoint2: CGPoint(x: 22, y: 4.03))
-            p.close()
-            p.fill()
-
-            let tri = UIBezierPath()
-            tri.move(to: CGPoint(x: 5, y: 15))
-            tri.addLine(to: CGPoint(x: 10, y: 9))
-            tri.addLine(to: CGPoint(x: 0, y: 9))
-            tri.close()
-            tri.fill()
-        }
-    }
-
-    private static func clampImage() -> UIImage? {
-        if #available(iOS 13.0, *) {
-            return UIImage(systemName: "aspectratio.fill",
-                           withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))?.withBaselineOffset(fromBottom: 0)
-        }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 22, height: 16))
-        return renderer.image { _ in
-            UIColor.white.setFill()
-            UIBezierPath(rect: CGRect(x: 0, y: 3, width: 13, height: 13)).fill()
-            UIColor(white: 1.0, alpha: 0.553).setFill()
-            UIBezierPath(rect: CGRect(x: 0, y: 0, width: 22, height: 2)).fill()
-            UIBezierPath(rect: CGRect(x: 19, y: 2, width: 3, height: 14)).fill()
-            UIColor(white: 1.0, alpha: 0.773).setFill()
-            UIBezierPath(rect: CGRect(x: 14, y: 3, width: 4, height: 13)).fill()
         }
     }
 }
