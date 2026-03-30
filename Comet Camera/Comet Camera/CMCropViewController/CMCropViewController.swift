@@ -505,18 +505,44 @@ open class CMCropViewController: UIViewController, CMCropViewDelegate, UIViewCon
             return
         }
         let presets = allowedAspectRatios ?? (internalCropView.cropBoxAspectRatioIsPortrait ? CMCropViewControllerAspectRatioPreset.portraitPresets() : CMCropViewControllerAspectRatioPreset.landscapePresets())
-        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel))
-        for preset in presets {
-            alert.addAction(UIAlertAction(title: preset.title, style: .default, handler: { _ in
-                self.setAspectRatioPreset(preset.size, animated: true)
-                self.aspectRatioLockEnabled = true
-            }))
+        let containerView = UIView(frame: view.bounds)
+        let itemWidth = (view.bounds.width - 20) / CGFloat(presets.count)
+        for (index, preset) in presets.enumerated() {
+            let x = CGFloat(index) * itemWidth + 10
+            let label = UILabel(frame: .init(x: x, y: toolbar.frame.maxY, width: itemWidth, height: 30))
+            label.text = preset.title
+            label.tag = index
+            label.sizeToFit()
+            label.textColor = internalAspectRatioPreset == preset.size ? .orange : .white
+            containerView.addSubview(label)
+            label.isUserInteractionEnabled = true
+            let tap = UITapGestureRecognizer(target: self, action: #selector(aspectRatioItemTap))
+            label.addGestureRecognizer(tap)
         }
-        alert.modalPresentationStyle = .popover
-        alert.popoverPresentationController?.sourceView = internalToolbar
-        alert.popoverPresentationController?.sourceRect = internalToolbar.clampButtonFrame
-        present(alert, animated: true)
+        let tap = UITapGestureRecognizer(target: self, action: #selector(aspectRatioTap))
+        containerView.addGestureRecognizer(tap)
+        view.addSubview(containerView)
+    }
+    
+    @objc
+    private func aspectRatioTap(_ sender: UITapGestureRecognizer) {
+        sender.view?.removeFromSuperview()
+    }
+    
+    @objc
+    private func aspectRatioItemTap(_ sender: UITapGestureRecognizer) {
+        let presets = allowedAspectRatios ?? (internalCropView.cropBoxAspectRatioIsPortrait ? CMCropViewControllerAspectRatioPreset.portraitPresets() : CMCropViewControllerAspectRatioPreset.landscapePresets())
+        let index = sender.view?.tag ?? 0
+        if let allLabels = sender.view?.superview?.subviews as? [UILabel] {
+            for label in allLabels {
+                label.textColor = .white
+            }
+        }
+        let preset = presets[index]
+        setAspectRatioPreset(preset.size, animated: true)
+        aspectRatioLockEnabled = true
+        
+        (sender.view as? UILabel)?.textColor = .orange
     }
 
     public func commitCurrentCrop() {
