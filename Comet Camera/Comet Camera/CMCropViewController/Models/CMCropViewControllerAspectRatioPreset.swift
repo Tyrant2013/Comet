@@ -19,7 +19,6 @@ public final class CMCropViewControllerAspectRatioPreset: NSObject {
 
     public static func portraitPresets() -> [CMCropViewControllerAspectRatioPreset] {
         let object = CMCropViewControllerAspectRatioPreset(size: .zero, title: "原始")
-//        let resourceBundle = CM_CROP_VIEW_RESOURCE_BUNDLE_FOR_OBJECT(object)
         return [
             object,
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 1.0, height: 1.0), title: "1:1"),
@@ -34,7 +33,6 @@ public final class CMCropViewControllerAspectRatioPreset: NSObject {
 
     public static func landscapePresets() -> [CMCropViewControllerAspectRatioPreset] {
         let object = CMCropViewControllerAspectRatioPreset(size: .zero, title: "原始")
-//        let resourceBundle = CM_CROP_VIEW_RESOURCE_BUNDLE_FOR_OBJECT(object)
         return [
             object,
             CMCropViewControllerAspectRatioPreset(size: CGSize(width: 1.0, height: 1.0), title: "1:1"),

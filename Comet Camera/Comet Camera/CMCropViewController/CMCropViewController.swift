@@ -68,7 +68,7 @@ open class CMCropViewController: UIViewController, CMCropViewDelegate, UIViewCon
         }
     }
 
-    public var toolbarPosition: CMCropViewControllerToolbarPosition = .bottom {
+    public var toolbarPosition: CMCropViewControllerToolbarPosition = .top {
         didSet { view.setNeedsLayout() }
     }
 
