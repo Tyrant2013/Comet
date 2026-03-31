@@ -206,11 +206,12 @@
 				};
 			};
 			buildConfigurationList = 01516AFA2F4EC81A0029059D /* Build configuration list for PBXProject "Comet Camera" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 01516AF62F4EC81A0029059D;
 			minimizedProjectReferenceProxies = 1;
@@ -303,6 +304,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Comet Camera/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "留颜";
 				INFOPLIST_KEY_NSCameraUsageDescription = Use;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = Use;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Use;
@@ -341,6 +343,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Comet Camera/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "留颜";
 				INFOPLIST_KEY_NSCameraUsageDescription = Use;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = Use;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Use;
@@ -426,6 +429,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -482,6 +486,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
