@@ -13,7 +13,7 @@ struct CMSmallFilterListView: View {
     var body: some View {
         GeometryReader { geometry in
             
-            CMScrollView(itemSize: image.size) {
+            CMScrollView(itemSize: image.size, spacing: 4) {
                 HStack(spacing: 4) {
                     ForEach(0..<10) { index in
                         Image(uiImage: image)
@@ -31,7 +31,6 @@ struct CMSmallFilterListView: View {
                 .padding(.horizontal, geometry.size.width / 2 - image.size.width / 2)
             }
             .frame(height: 40)
-                
         }
         .frame(height: 40)
         .frame(height: 60)
@@ -50,36 +49,65 @@ struct CMSmallFilterListView: View {
     }
 }
 
+struct CMRadioAngleView: View {
+    @Binding var index: Int
+    var body: some View {
+        GeometryReader { geometry in
+            CMScrollView(itemSize: .init(width: 1, height: 20), spacing: 0) {
+                HStack(alignment: .bottom, spacing: 0) {
+                    ForEach(0..<36, id: \.self) { _ in
+                        ForEach(0..<10, id: \.self) { index in
+                            Rectangle()
+                                .frame(width: 1, height: index % 10 == 0 ? 20 : 10)
+                                .opacity(index % 5 == 0 ? 1 : 0)
+                        }
+                    }
+                }
+                .padding(.horizontal, geometry.size.width / 2)
+            } indexDidChanged: { oldIndex, newIndex in
+                print("index:", newIndex)
+            }
+        }
+    }
+}
+
 #Preview {
-    CMSmallFilterListView(image: UIImage(named: "PreviewImage")!.preparingThumbnail(of: .init(width: 30, height: 40))!)
+//    CMSmallFilterListView(image: UIImage(named: "PreviewImage")!.preparingThumbnail(of: .init(width: 30, height: 40))!)
+    CMRadioAngleView(index: .constant(0))
 }
 
 struct CMScrollView<Content: View>: UIViewRepresentable {
     let itemSize: CGSize
+    var spacing: CGFloat = 0
+    @ViewBuilder
     let content: () -> Content
+    var indexDidChanged: ((_ oldIndex: Int, _ newIndex: Int) -> Void)?
+    
     func makeUIView(context: Context) -> UIScrollView {
-        let vv = UIScrollView()
-        vv.showsVerticalScrollIndicator = false
-        vv.showsHorizontalScrollIndicator = false
-        vv.isScrollEnabled = true
-        let contentView = UIHostingController(rootView: content()).view!
-        vv.addSubview(contentView)
-        vv.delegate = context.coordinator
+        let scrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.decelerationRate = .fast
+        
+        let host = UIHostingController(rootView: content())
+        let contentView = host.view!
+        contentView.backgroundColor = .clear
+        
+        scrollView.addSubview(contentView)
+        scrollView.delegate = context.coordinator
         
         contentView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: vv.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: vv.trailingAnchor),
-            contentView.topAnchor.constraint(equalTo: vv.topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: vv.bottomAnchor),
-            contentView.heightAnchor.constraint(equalTo: vv.heightAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
         ])
-        return vv
+        
+        return scrollView
     }
     
-    func updateUIView(_ uiView: UIScrollView, context: Context) {
-        
-    }
+    func updateUIView(_ uiView: UIScrollView, context: Context) {}
     
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -87,23 +115,30 @@ struct CMScrollView<Content: View>: UIViewRepresentable {
     
     class Coordinator: NSObject, UIScrollViewDelegate {
         let parent: CMScrollView
-        var index: Int = 0
+        var contentView: UIView?
+        
+        private var lastHapticIndex: Int = -1
+        private let feedbackGenerator = UISelectionFeedbackGenerator()
+        
         init(parent: CMScrollView) {
             self.parent = parent
+            super.init()
+            self.feedbackGenerator.prepare()
         }
         
-//        func scrollViewDidScroll(_ scrollView: UIScrollView) {
-//            let x = scrollView.contentOffset.x
-//            let index = Int(x / parent.itemSize.width)
-//            guard self.index != index else { return }
-//            self.index = index
-//        }
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            let offsetX = scrollView.contentOffset.x
+            let index = Int(offsetX / (parent.itemSize.width + parent.spacing))
+            parent.indexDidChanged?(0, index)
+        }
         
         func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+            let pageWidth = parent.itemSize.width + parent.spacing
+            let targetX = targetContentOffset.pointee.x
             
-            let targetIndex = Int(targetContentOffset.pointee.x / (parent.itemSize.width + 4))
-            let targetOffsetX = CGFloat(targetIndex) * (parent.itemSize.width + 4)
-            targetContentOffset.pointee.x = targetOffsetX
+            let nearestIndex = round(targetX / pageWidth)
+            targetContentOffset.pointee.x = nearestIndex * pageWidth
+            
         }
     }
 }
