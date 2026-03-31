@@ -828,3 +828,21 @@ open class CMCropViewController: UIViewController, CMCropViewDelegate, UIViewCon
         return customTransitioning
     }
 }
+
+import SwiftUI
+
+
+struct CMCropViewSwiftUI: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> CMCropViewController {
+        let vc = CMCropViewController(image: UIImage(named: "PreviewImage")!)
+        return vc
+    }
+    
+    func updateUIViewController(_ uiViewController: CMCropViewController, context: Context) {
+        
+    }
+}
+
+#Preview {
+    CMCropViewSwiftUI()
+}
