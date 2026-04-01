@@ -27,6 +27,19 @@ class ViewController: UIViewController {
             btn.widthAnchor.constraint(equalToConstant: 200),
             btn.heightAnchor.constraint(equalToConstant: 60)
         ])
+        
+        let editButton = UIHostingController(rootView: DemoButton(title: "编辑", action: { [weak self] in
+            let vc = CMPhotoEditViewController(image: UIImage(named: "PreviewImage")!)
+            guard let strongSelf = self else { return }
+            strongSelf.present(vc, animated: true)
+        })).view!
+        editButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(editButton)
+        NSLayoutConstraint.activate([
+            editButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            editButton.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: 80),
+            
+        ])
     }
     
     @objc
@@ -48,4 +61,20 @@ class ViewController: UIViewController {
     }
     */
 
+}
+
+import SwiftUI
+
+struct DemoButton: View {
+    let title: String
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.black)
+                .frame(width: 120, height: 40)
+                .background(.orange, in: .rect(cornerRadius: 6))
+        }
+    }
 }

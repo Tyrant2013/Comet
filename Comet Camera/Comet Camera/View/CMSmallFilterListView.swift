@@ -87,6 +87,7 @@ struct CMScrollView<Content: View>: UIViewRepresentable {
         let scrollView = UIScrollView()
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.decelerationRate = .fast
+        scrollView.alwaysBounceHorizontal = true
         
         let host = UIHostingController(rootView: content())
         let contentView = host.view!

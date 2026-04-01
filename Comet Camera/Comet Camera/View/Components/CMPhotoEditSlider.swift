@@ -1,85 +1,12 @@
 //
-//  CMPhotoEditPannel.swift
+//  CMPhotoEditSlider.swift
 //  Comet Camera
 //
 
 import Foundation
 import UIKit
 
-// MARK: - 刻度视图
-class ScaleView: UIView {
-    var configuration: PhotoEditSlider.Configuration
-    weak var scrollView: UIScrollView? // 需要知道当前滚动位置
-    
-    init(configuration: PhotoEditSlider.Configuration, scrollView: UIScrollView, frame: CGRect) {
-        self.configuration = configuration
-        self.scrollView = scrollView
-        super.init(frame: frame)
-        backgroundColor = .clear
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func draw(_ rect: CGRect) {
-        guard let context = UIGraphicsGetCurrentContext(),
-              let scrollView = scrollView else { return }
-        
-        let totalRange = configuration.maxValue - configuration.minValue
-        let totalTicks = Int(totalRange / configuration.step)
-        let centerX = bounds.width / 2
-        
-        // 屏幕中央位置（在 scrollView 坐标系中）
-        let screenCenterX = scrollView.contentOffset.x + scrollView.bounds.width / 2
-        
-        for i in 0...totalTicks {
-            let value = configuration.minValue + CGFloat(i) * configuration.step
-            let x = centerX + CGFloat(i - totalTicks/2) * configuration.tickSpacing
-            
-            let isMajor = i % configuration.majorTickInterval == 0
-            let isDefault = abs(value - configuration.defaultValue) < 0.001
-            
-            // 计算该刻度距离屏幕中央的距离
-            let distanceFromScreenCenter = abs(x - screenCenterX)
-            
-            // 渐隐参数：80pt 内完全显示，150pt 外完全消失
-            let fadeStart: CGFloat = 60
-            let fadeEnd: CGFloat = 140
-            let alpha = max(0, min(1, 1 - (distanceFromScreenCenter - fadeStart) / (fadeEnd - fadeStart)))
-            
-            // 完全透明的跳过绘制
-            guard alpha > 0.01 else { continue }
-            
-            let tickHeight: CGFloat = isMajor ? 20 : (isDefault ? 16 : 12)
-            let y: CGFloat = isMajor ? 10 : (isDefault ? 12 : 14)
-            
-            // 刻度颜色：中央高亮黄色，其他白色
-            let isCenter = distanceFromScreenCenter < configuration.tickSpacing / 2
-            let color = isCenter ? UIColor.systemYellow : UIColor.white
-            
-            context.setStrokeColor(color.withAlphaComponent(alpha * (isMajor ? 1.0 : 0.6)).cgColor)
-            context.setLineWidth(isMajor ? 2.5 : 1.5)
-            context.move(to: CGPoint(x: x, y: y))
-            context.addLine(to: CGPoint(x: x, y: y + tickHeight))
-            context.strokePath()
-            
-            // 大刻度数值
-            if isMajor {
-                let text = "\(Int(value))"
-                let attributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 10, weight: isCenter ? .semibold : .regular),
-                    .foregroundColor: color.withAlphaComponent(alpha * 0.7)
-                ]
-                let size = text.size(withAttributes: attributes)
-                text.draw(at: CGPoint(x: x - size.width/2, y: y + tickHeight + 4), withAttributes: attributes)
-            }
-        }
-    }
-}
-
-// MARK: - 主组件
-class PhotoEditSlider: UIView {
+class CMPhotoEditSlider: UIView {
     
     struct Configuration {
         var minValue: CGFloat = -100
@@ -97,7 +24,7 @@ class PhotoEditSlider: UIView {
     private(set) var currentValue: CGFloat = 0
     
     private let scrollView = UIScrollView()
-    private var scaleView: ScaleView!
+    private var scaleView: CMScaleView!
     private let valueLabel = UILabel()
     private let indicatorContainer = UIView()
     private let parameterLabel = UILabel()
@@ -135,6 +62,7 @@ class PhotoEditSlider: UIView {
         let contentWidth = totalContentWidth
         scrollView.contentSize = CGSize(width: contentWidth, height: scrollView.bounds.height)
         scaleView.frame = CGRect(x: 0, y: 0, width: contentWidth, height: scrollView.bounds.height)
+        print("Check:", scaleView.frame, scrollView.bounds)
         
         if !scrollView.isDragging && !scrollView.isDecelerating && scrollView.contentOffset.x == 0 {
             setValue(configuration.defaultValue, animated: false)
@@ -151,43 +79,49 @@ class PhotoEditSlider: UIView {
         container.translatesAutoresizingMaskIntoConstraints = false
         addSubview(container)
         
-        parameterLabel.translatesAutoresizingMaskIntoConstraints = false
-        parameterLabel.text = "亮度"
-        parameterLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
-        parameterLabel.textColor = .white.withAlphaComponent(0.8)
-        parameterLabel.textAlignment = .center
-        container.addSubview(parameterLabel)
-        
-        valueLabel.translatesAutoresizingMaskIntoConstraints = false
-        valueLabel.font = UIFont.systemFont(ofSize: 34, weight: .semibold)
-        valueLabel.textColor = .white
-        valueLabel.textAlignment = .center
-        valueLabel.text = formatValue(configuration.defaultValue)
-        container.addSubview(valueLabel)
+//        parameterLabel.translatesAutoresizingMaskIntoConstraints = false
+//        parameterLabel.text = "亮度"
+//        parameterLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
+//        parameterLabel.textColor = .white.withAlphaComponent(0.8)
+//        parameterLabel.textAlignment = .center
+//        container.addSubview(parameterLabel)
+//        
+//        valueLabel.translatesAutoresizingMaskIntoConstraints = false
+//        valueLabel.font = UIFont.systemFont(ofSize: 34, weight: .semibold)
+//        valueLabel.textColor = .white
+//        valueLabel.textAlignment = .center
+//        valueLabel.text = formatValue(configuration.defaultValue)
+//        container.addSubview(valueLabel)
         
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.delegate = self
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.decelerationRate = .fast
         container.addSubview(scrollView)
+        scrollView.backgroundColor = .blue
         
         // 创建 ScaleView，传入 scrollView 引用
-        scaleView = ScaleView(configuration: configuration, scrollView: scrollView, frame: .zero)
-        scaleView.translatesAutoresizingMaskIntoConstraints = false
+        scaleView = CMScaleView(configuration: configuration, scrollView: scrollView, frame: .zero)
+//        scaleView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(scaleView)
         
         // 中央指示器（仅作为视觉参考，实际高亮由 ScaleView 绘制）
-        indicatorContainer.translatesAutoresizingMaskIntoConstraints = false
-        indicatorContainer.backgroundColor = .clear
-        indicatorContainer.isUserInteractionEnabled = false
-        container.addSubview(indicatorContainer)
+//        indicatorContainer.translatesAutoresizingMaskIntoConstraints = false
+//        indicatorContainer.backgroundColor = .clear
+//        indicatorContainer.isUserInteractionEnabled = false
+//        container.addSubview(indicatorContainer)
         
         // 中央指示线（半透明，因为实际高亮在刻度上）
-        let centerLine = UIView()
-        centerLine.translatesAutoresizingMaskIntoConstraints = false
-        centerLine.backgroundColor = UIColor.systemYellow.withAlphaComponent(0.3)
-        centerLine.layer.cornerRadius = 1
-        indicatorContainer.addSubview(centerLine)
+//        let centerLine = UIView()
+//        centerLine.translatesAutoresizingMaskIntoConstraints = false
+//        centerLine.backgroundColor = UIColor.systemYellow.withAlphaComponent(0.3)
+//        centerLine.layer.cornerRadius = 1
+//        indicatorContainer.addSubview(centerLine)
+//        scrollView.addSubview(centerLine)
+//        indicatorContainer.backgroundColor = .red
+        
+        container.backgroundColor = .red
+//        parameterLabel.backgroundColor = .yellow
         
         NSLayoutConstraint.activate([
             blurView.topAnchor.constraint(equalTo: topAnchor),
@@ -200,27 +134,30 @@ class PhotoEditSlider: UIView {
             container.trailingAnchor.constraint(equalTo: trailingAnchor),
             container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
             
-            parameterLabel.topAnchor.constraint(equalTo: container.topAnchor),
-            parameterLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+//            parameterLabel.topAnchor.constraint(equalTo: container.topAnchor),
+//            parameterLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+//            parameterLabel.heightAnchor.constraint(equalToConstant: 30),
+//            
+//            valueLabel.topAnchor.constraint(equalTo: parameterLabel.bottomAnchor, constant: 8),
+//            valueLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+//            valueLabel.heightAnchor.constraint(equalToConstant: 30),
             
-            valueLabel.topAnchor.constraint(equalTo: parameterLabel.bottomAnchor, constant: 8),
-            valueLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            
-            scrollView.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: 4),
+            scrollView.topAnchor.constraint(equalTo: container.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+//            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
             scrollView.heightAnchor.constraint(equalToConstant: 50),
             
-            indicatorContainer.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: 8),
-            indicatorContainer.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            indicatorContainer.widthAnchor.constraint(equalToConstant: 40),
-            indicatorContainer.heightAnchor.constraint(equalToConstant: 40),
+//            indicatorContainer.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: 8),
+//            indicatorContainer.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+//            indicatorContainer.widthAnchor.constraint(equalToConstant: 40),
+//            indicatorContainer.heightAnchor.constraint(equalToConstant: 40),
             
-            centerLine.centerXAnchor.constraint(equalTo: indicatorContainer.centerXAnchor),
-            centerLine.centerYAnchor.constraint(equalTo: indicatorContainer.centerYAnchor),
-            centerLine.widthAnchor.constraint(equalToConstant: 2),
-            centerLine.heightAnchor.constraint(equalToConstant: 28)
+//            centerLine.centerXAnchor.constraint(equalTo: indicatorContainer.centerXAnchor),
+//            centerLine.centerYAnchor.constraint(equalTo: indicatorContainer.centerYAnchor),
+            
+//            centerLine.widthAnchor.constraint(equalToConstant: 2),
+//            centerLine.heightAnchor.constraint(equalToConstant: 28)
         ])
         
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap))
@@ -265,8 +202,9 @@ class PhotoEditSlider: UIView {
     }
 }
 
+
 // MARK: - UIScrollViewDelegate
-extension PhotoEditSlider: UIScrollViewDelegate {
+extension CMPhotoEditSlider: UIScrollViewDelegate {
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         // 关键：每次滚动都重绘刻度，更新透明度和高亮
@@ -334,22 +272,4 @@ extension PhotoEditSlider: UIScrollViewDelegate {
         isAdjusting = false
         valueChangeEnded?(currentValue)
     }
-}
-
-import SwiftUI
-
-struct EditorTestView: UIViewRepresentable {
-    func makeUIView(context: Context) -> PhotoEditSlider {
-        let vv = PhotoEditSlider()
-        
-        return vv
-    }
-    
-    func updateUIView(_ uiView: PhotoEditSlider, context: Context) {
-        
-    }
-}
-
-#Preview {
-    EditorTestView()
 }
