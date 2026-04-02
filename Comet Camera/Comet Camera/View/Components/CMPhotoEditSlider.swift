@@ -60,9 +60,9 @@ class CMPhotoEditSlider: UIView {
         super.layoutSubviews()
         
         let contentWidth = totalContentWidth
+        scrollView.frame = .init(origin: .zero, size: .init(width: bounds.width, height: 50))
         scrollView.contentSize = CGSize(width: contentWidth, height: scrollView.bounds.height)
         scaleView.frame = CGRect(x: 0, y: 0, width: contentWidth, height: scrollView.bounds.height)
-        print("Check:", scaleView.frame, scrollView.bounds)
         
         if !scrollView.isDragging && !scrollView.isDecelerating && scrollView.contentOffset.x == 0 {
             setValue(configuration.defaultValue, animated: false)
@@ -93,12 +93,12 @@ class CMPhotoEditSlider: UIView {
 //        valueLabel.text = formatValue(configuration.defaultValue)
 //        container.addSubview(valueLabel)
         
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
+//        scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.delegate = self
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.decelerationRate = .fast
         container.addSubview(scrollView)
-        scrollView.backgroundColor = .blue
+//        scrollView.backgroundColor = .blue
         
         // 创建 ScaleView，传入 scrollView 引用
         scaleView = CMScaleView(configuration: configuration, scrollView: scrollView, frame: .zero)
@@ -120,8 +120,11 @@ class CMPhotoEditSlider: UIView {
 //        scrollView.addSubview(centerLine)
 //        indicatorContainer.backgroundColor = .red
         
-        container.backgroundColor = .red
+//        container.backgroundColor = .red
 //        parameterLabel.backgroundColor = .yellow
+        
+//        scrollView.frame = .init(x: 0, y: 0, width: bounds.width, height: 50)
+//        scrollView.translatesAutoresizingMaskIntoConstraints = true
         
         NSLayoutConstraint.activate([
             blurView.topAnchor.constraint(equalTo: topAnchor),
@@ -142,11 +145,11 @@ class CMPhotoEditSlider: UIView {
 //            valueLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
 //            valueLabel.heightAnchor.constraint(equalToConstant: 30),
             
-            scrollView.topAnchor.constraint(equalTo: container.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+//            scrollView.topAnchor.constraint(equalTo: container.topAnchor),
+//            scrollView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+//            scrollView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
 //            scrollView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            scrollView.heightAnchor.constraint(equalToConstant: 50),
+//            scrollView.heightAnchor.constraint(equalToConstant: 50),
             
 //            indicatorContainer.topAnchor.constraint(equalTo: valueLabel.bottomAnchor, constant: 8),
 //            indicatorContainer.centerXAnchor.constraint(equalTo: container.centerXAnchor),

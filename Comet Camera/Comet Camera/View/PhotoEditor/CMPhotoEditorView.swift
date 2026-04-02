@@ -740,13 +740,13 @@ class CMPhotoEditViewController: UIViewController {
         
         let ff = CMPhotoEditSlider()
         adjuster.addSubview(ff)
-//        ff.translatesAutoresizingMaskIntoConstraints = false
-//        NSLayoutConstraint.activate([
-//            ff.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor),
-//            ff.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor),
-////            ff.topAnchor.constraint(equalTo: adjuster.topAnchor),
-//            ff.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
-//        ])
+        ff.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            ff.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor),
+            ff.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor),
+            ff.topAnchor.constraint(equalTo: adjuster.topAnchor),
+            ff.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
+        ])
         
         let lensPicker = UIHostingController(rootView: CMPhotoEditorAdjustPicker(itemDidChanged: { value in
             
