@@ -198,8 +198,8 @@ enum RulerMarkType {
 final class RulerView: UIView {
     
     struct Configuration {
-        var minValue: Int = 0
-        var maxValue: Int = 1000
+        var minValue: Int = -100
+        var maxValue: Int = 100
         var majorStep: Int = 10
         var mediumStep: Int = 5
         var valueChanged: ((Int) -> Void)?
@@ -416,7 +416,7 @@ class CMRulerViewController: UIViewController {
         
         // 配置带肉卷效果的刻度盘
         rulerView.configuration = RulerView.Configuration(
-            minValue: 0,
+            minValue: -100,
             maxValue: 100,
             majorStep: 10,
             mediumStep: 5,
@@ -426,13 +426,13 @@ class CMRulerViewController: UIViewController {
             fadeEffectEnabled: true,    // 启用肉卷效果
             fadeDistance: 120,         // 120pt 外开始淡出
             minScale: 0.4,             // 最小缩放到 40%
-            minAlpha: 0.2              // 最小透明度 20%
+            minAlpha: 0.1              // 最小透明度 20%
         )
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        rulerView.setValue(50, animated: true)
+        rulerView.setValue(0, animated: true)
     }
     
     private func setupUI() {
