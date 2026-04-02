@@ -9,9 +9,13 @@ final class RulerLayout: UICollectionViewFlowLayout {
     
     var itemWidth: CGFloat = 2
     var itemSpacing: CGFloat = 10
-    
-    // 左右边距，让首尾刻度能居中
     var edgePadding: CGFloat = 0
+    
+    // 肉卷效果配置
+    var fadeEffectEnabled: Bool = true
+    var fadeDistance: CGFloat = 150 // 开始淡出的距离（从中心点算）
+    var minScale: CGFloat = 0.5     // 最小缩放比例
+    var minAlpha: CGFloat = 0.3     // 最小透明度
     
     private var cache: [UICollectionViewLayoutAttributes] = []
     private var contentWidth: CGFloat = 0
@@ -30,8 +34,6 @@ final class RulerLayout: UICollectionViewFlowLayout {
         itemSize = CGSize(width: itemWidth, height: collectionView.bounds.height)
         
         let numberOfItems = collectionView.numberOfItems(inSection: 0)
-        
-        // 计算总宽度：边距 + 所有item + 边距
         let itemsWidth = CGFloat(numberOfItems) * itemWidth
         let spacingWidth = CGFloat(numberOfItems - 1) * itemSpacing
         contentWidth = edgePadding * 2 + itemsWidth + spacingWidth
@@ -46,28 +48,66 @@ final class RulerLayout: UICollectionViewFlowLayout {
     }
     
     override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
-        return cache.filter { $0.frame.intersects(rect) }
+        guard fadeEffectEnabled, let collectionView = collectionView else {
+            return cache.filter { $0.frame.intersects(rect) }
+        }
+        
+        let centerX = collectionView.contentOffset.x + collectionView.bounds.width / 2
+        
+        return cache.filter { $0.frame.intersects(rect) }.map { attributes in
+            let copy = attributes.copy() as! UICollectionViewLayoutAttributes
+            applyFadeEffect(to: copy, centerX: centerX)
+            return copy
+        }
     }
     
     override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
         guard indexPath.item < cache.count else { return nil }
-        return cache[indexPath.item]
+        
+        let attributes = cache[indexPath.item]
+        
+        guard fadeEffectEnabled, let collectionView = collectionView else {
+            return attributes
+        }
+        
+        let centerX = collectionView.contentOffset.x + collectionView.bounds.width / 2
+        let copy = attributes.copy() as! UICollectionViewLayoutAttributes
+        applyFadeEffect(to: copy, centerX: centerX)
+        return copy
     }
     
-    // 添加这个方法确保边界可滚动
+    private func applyFadeEffect(to attributes: UICollectionViewLayoutAttributes, centerX: CGFloat) {
+        let itemCenterX = attributes.center.x
+        let distance = abs(itemCenterX - centerX)
+        
+        // 计算效果因子 (0 ~ 1)
+        let factor = min(1, max(0, distance / fadeDistance))
+        
+        // 应用缩放和透明度
+        let scale = 1 - (factor * (1 - minScale))
+        let alpha = 1 - (factor * (1 - minAlpha))
+        
+        attributes.transform = CGAffineTransform(scaleX: 1, y: scale)
+        attributes.alpha = alpha
+        // 保持底部对齐的缩放效果
+        attributes.center.y = attributes.center.y + (attributes.bounds.height * (1 - scale)) / 2
+    }
+    
     override func targetContentOffset(forProposedContentOffset proposedContentOffset: CGPoint, withScrollingVelocity velocity: CGPoint) -> CGPoint {
         guard let collectionView = collectionView else { return proposedContentOffset }
         
         let targetX = proposedContentOffset.x + collectionView.bounds.width / 2
         let itemWidthPlusSpacing = itemWidth + itemSpacing
-        
-        // 计算最近的索引
         let index = round((targetX - edgePadding - itemWidth / 2) / itemWidthPlusSpacing)
         let clampedIndex = max(0, min(CGFloat(cache.count - 1), index))
-        
         let newOffset = edgePadding + clampedIndex * itemWidthPlusSpacing - collectionView.bounds.width / 2 + itemWidth / 2
         
         return CGPoint(x: newOffset, y: 0)
+    }
+    
+    // 支持 bounds 变化时重新计算效果
+    override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
+        return fadeEffectEnabled
     }
 }
 
@@ -109,6 +149,9 @@ final class RulerCell: UICollectionViewCell {
         super.prepareForReuse()
         lineLayer.path = nil
         label.text = nil
+        // 重置变换
+        transform = .identity
+        alpha = 1
     }
     
     func configure(value: Int, type: RulerMarkType) {
@@ -118,7 +161,6 @@ final class RulerCell: UICollectionViewCell {
         let path = UIBezierPath()
         let width = contentView.bounds.width
         let height = contentView.bounds.height
-        
         let bottomY = height - 10
         
         switch type {
@@ -161,11 +203,17 @@ final class RulerView: UIView {
         var majorStep: Int = 10
         var mediumStep: Int = 5
         var valueChanged: ((Int) -> Void)?
+        
+        // 肉卷效果配置
+        var fadeEffectEnabled: Bool = true      // 是否启用肉卷效果
+        var fadeDistance: CGFloat = 150         // 淡出距离（点）
+        var minScale: CGFloat = 0.5               // 最小缩放
+        var minAlpha: CGFloat = 0.3                 // 最小透明度
     }
     
     var configuration: Configuration = Configuration() {
         didSet {
-            updateRange()
+            updateConfiguration()
         }
     }
     
@@ -183,7 +231,7 @@ final class RulerView: UIView {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
-        cv.decelerationRate = .normal // 改为 normal 让系统处理吸附
+        cv.decelerationRate = .normal
         cv.delegate = self
         cv.dataSource = self
         cv.register(RulerCell.self, forCellWithReuseIdentifier: RulerCell.reuseIdentifier)
@@ -254,11 +302,9 @@ final class RulerView: UIView {
         let oldPadding = layout.edgePadding
         layout.edgePadding = centerIndicatorOffset
         
-        // 只在 padding 变化时重新布局
         if oldPadding != layout.edgePadding {
             collectionView.collectionViewLayout.invalidateLayout()
             
-            // 如果有待设置的值，现在应用
             if let pending = pendingValue {
                 pendingValue = nil
                 setValue(pending, animated: false)
@@ -266,10 +312,19 @@ final class RulerView: UIView {
         }
     }
     
+    private func updateConfiguration() {
+        layout.fadeEffectEnabled = configuration.fadeEffectEnabled
+        layout.fadeDistance = configuration.fadeDistance
+        layout.minScale = configuration.minScale
+        layout.minAlpha = configuration.minAlpha
+        
+        collectionView.reloadData()
+        updateValueLabel(currentValue)
+    }
+    
     func setValue(_ value: Int, animated: Bool = true) {
         let clampedValue = min(max(value, configuration.minValue), configuration.maxValue)
         
-        // 如果还未布局，先保存待设置
         guard collectionView.bounds.width > 0, layout.edgePadding > 0 else {
             pendingValue = clampedValue
             return
@@ -278,7 +333,6 @@ final class RulerView: UIView {
         let index = clampedValue - configuration.minValue
         let offset = layout.edgePadding + CGFloat(index) * (layout.itemWidth + layout.itemSpacing) - centerIndicatorOffset + layout.itemWidth / 2
         
-        // 限制 contentOffset 范围
         let maxOffset = collectionView.contentSize.width - collectionView.bounds.width
         let finalOffset = max(0, min(offset, maxOffset))
         
@@ -286,15 +340,17 @@ final class RulerView: UIView {
         updateValueLabel(clampedValue)
     }
     
-    private func updateRange() {
-        collectionView.reloadData()
-        collectionView.layoutIfNeeded()
-        updateValueLabel(configuration.minValue)
-    }
-    
     private func updateValueLabel(_ value: Int) {
         valueLabel.text = "\(value)"
         configuration.valueChanged?(value)
+    }
+    
+    private func snapToNearest() {
+        let targetOffset = layout.targetContentOffset(
+            forProposedContentOffset: collectionView.contentOffset,
+            withScrollingVelocity: .zero
+        )
+        collectionView.setContentOffset(targetOffset, animated: true)
     }
 }
 
@@ -328,12 +384,14 @@ extension RulerView: UICollectionViewDataSource {
 extension RulerView: UICollectionViewDelegate {
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // 滚动时实时更新肉卷效果
+        if configuration.fadeEffectEnabled {
+            collectionView.collectionViewLayout.invalidateLayout()
+        }
         updateValueLabel(currentValue)
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        // 使用 layout 的 targetContentOffset 自动处理吸附
-        // 这里只需要更新数值显示
         updateValueLabel(currentValue)
     }
     
@@ -341,14 +399,6 @@ extension RulerView: UICollectionViewDelegate {
         if !decelerate {
             snapToNearest()
         }
-    }
-    
-    private func snapToNearest() {
-        let targetOffset = layout.targetContentOffset(
-            forProposedContentOffset: collectionView.contentOffset,
-            withScrollingVelocity: .zero
-        )
-        collectionView.setContentOffset(targetOffset, animated: true)
     }
 }
 
@@ -364,20 +414,25 @@ class CMRulerViewController: UIViewController {
         
         setupUI()
         
+        // 配置带肉卷效果的刻度盘
         rulerView.configuration = RulerView.Configuration(
             minValue: 0,
             maxValue: 100,
             majorStep: 10,
-            mediumStep: 5
-        ) { [weak self] value in
-            self?.resultLabel.text = "选中: \(value)"
-        }
+            mediumStep: 5,
+            valueChanged: { [weak self] value in
+                self?.resultLabel.text = "选中: \(value)"
+            },
+            fadeEffectEnabled: true,    // 启用肉卷效果
+            fadeDistance: 120,         // 120pt 外开始淡出
+            minScale: 0.4,             // 最小缩放到 40%
+            minAlpha: 0.2              // 最小透明度 20%
+        )
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        // 在 view 完全布局后设置初始值
-        rulerView.setValue(0, animated: true)
+        rulerView.setValue(50, animated: true)
     }
     
     private func setupUI() {
