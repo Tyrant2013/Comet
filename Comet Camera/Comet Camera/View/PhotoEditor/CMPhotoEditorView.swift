@@ -738,14 +738,17 @@ class CMPhotoEditViewController: UIViewController {
         adjuster.translatesAutoresizingMaskIntoConstraints = false
         adjuster.backgroundColor = .clear
         
-        let ff = CMPhotoEditSlider()
-        adjuster.addSubview(ff)
-        ff.translatesAutoresizingMaskIntoConstraints = false
+        let ruler = CMRulerView()
+        ruler.configuration = .init(valueChanged: { newValue in
+            
+        })
+        ruler.translatesAutoresizingMaskIntoConstraints = false
+        adjuster.addSubview(ruler)
         NSLayoutConstraint.activate([
-            ff.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor),
-            ff.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor),
-            ff.topAnchor.constraint(equalTo: adjuster.topAnchor),
-            ff.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
+            ruler.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor, constant: 1),
+            ruler.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor, constant: -1),
+            ruler.topAnchor.constraint(equalTo: adjuster.topAnchor, constant: 1),
+            ruler.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor, constant: -5)
         ])
         
         let lensPicker = UIHostingController(rootView: CMPhotoEditorAdjustPicker(itemDidChanged: { value in
@@ -803,8 +806,12 @@ struct CMPhotoEditViewPreview: UIViewControllerRepresentable {
 #Preview {
 //    CMPhotoEditorView()
 //    ImageSpotlightView()
-    CMPhotoEditViewPreview()
-        .ignoresSafeArea()
+//    CMPhotoEditViewPreview()
+//        .ignoresSafeArea()
+    GeometryReader { geometry in
+        Image("abc")
+            .frame(width: geometry.size.width, height: geometry.size.height)
+    }
 }
 
 

@@ -20,7 +20,7 @@ final class CMRulerCell: UICollectionViewCell {
     private let label: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = .label
+        label.textColor = .white
         label.textAlignment = .center
         return label
     }()

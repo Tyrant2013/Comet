@@ -16,6 +16,7 @@ final class CMRulerView: UIView {
         var maxValue: Int = 100
         var majorStep: Int = 10
         var mediumStep: Int = 5
+        var textColor: UIColor = .white
         var valueChanged: ((Int) -> Void)?
         
         // 肉卷效果配置
@@ -59,10 +60,10 @@ final class CMRulerView: UIView {
         return view
     }()
     
-    private let valueLabel: UILabel = {
+    private lazy var valueLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 24, weight: .bold)
-        label.textColor = .label
+        label.textColor = configuration.textColor
         label.textAlignment = .center
         return label
     }()
@@ -84,7 +85,7 @@ final class CMRulerView: UIView {
     }
     
     private func setupUI() {
-        backgroundColor = .systemBackground
+        backgroundColor = .clear
         
         addSubview(collectionView)
         addSubview(centerIndicator)

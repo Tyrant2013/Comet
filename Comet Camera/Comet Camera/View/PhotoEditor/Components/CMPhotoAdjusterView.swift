@@ -17,9 +17,9 @@ struct CMPhotoAdjusterView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(lineWidth: 2)
-                .foregroundStyle(.white)
+                .foregroundStyle(.white.opacity(0.4))
         )
-//        .background(.ultraThinMaterial, in: .rect(cornerRadius: 14))
+        .background(.ultraThinMaterial, in: .rect(cornerRadius: 14))
 //        .background(LinearGradient(colors: [.white.opacity(0.1), .white.opacity(0.6)], startPoint: .top, endPoint: .bottom))
         .clipShape(.rect(cornerRadius: 14, style: .continuous))
     }
