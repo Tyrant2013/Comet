@@ -74,6 +74,8 @@ class CMPhotoEditSlider: UIView {
         let blurView = UIVisualEffectView(effect: blurEffect)
         blurView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(blurView)
+        layer.cornerRadius = 14
+        clipsToBounds = true
         
         let container = UIView()
         container.translatesAutoresizingMaskIntoConstraints = false
@@ -98,7 +100,7 @@ class CMPhotoEditSlider: UIView {
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.decelerationRate = .fast
         container.addSubview(scrollView)
-//        scrollView.backgroundColor = .blue
+        scrollView.backgroundColor = .clear
         
         // 创建 ScaleView，传入 scrollView 引用
         scaleView = CMScaleView(configuration: configuration, scrollView: scrollView, frame: .zero)

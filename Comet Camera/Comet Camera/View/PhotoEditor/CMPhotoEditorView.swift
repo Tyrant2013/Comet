@@ -733,15 +733,18 @@ class CMPhotoEditViewController: UIViewController {
         
         imageContainer.addSubview(imageView)
         
-        let adjuster = UIHostingController(rootView: CMPhotoAdjusterView()).view!
+        let adjuster = UIView()
         view.addSubview(adjuster)
         adjuster.translatesAutoresizingMaskIntoConstraints = false
         adjuster.backgroundColor = .clear
         
-        let ff = CMPhotoEditSlider()
+        let ff = CMRulerView()
         adjuster.addSubview(ff)
         ff.translatesAutoresizingMaskIntoConstraints = false
+        ff.backgroundColor = .clear
+        
         NSLayoutConstraint.activate([
+            adjuster.heightAnchor.constraint(equalToConstant: 80),
             ff.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor),
             ff.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor),
             ff.topAnchor.constraint(equalTo: adjuster.topAnchor),
