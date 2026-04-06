@@ -11,23 +11,7 @@ struct CMPhotoAdjustItem: Identifiable, Equatable {
 }
 
 struct CMPhotoEditorAdjustPicker: View {
-    let items: [CMPhotoAdjustItem] = [
-        CMPhotoAdjustItem(id: 1,  title: "曝光"),
-        CMPhotoAdjustItem(id: 2,  title: "鲜明度"),
-        CMPhotoAdjustItem(id: 3,  title: "高光"),
-        CMPhotoAdjustItem(id: 4,  title: "阴影"),
-        CMPhotoAdjustItem(id: 5,  title: "对比度"),
-        CMPhotoAdjustItem(id: 6,  title: "亮度"),
-        CMPhotoAdjustItem(id: 7,  title: "黑点"),
-        CMPhotoAdjustItem(id: 8,  title: "饱和度"),
-        CMPhotoAdjustItem(id: 9,  title: "自然饱和度"),
-        CMPhotoAdjustItem(id: 10, title: "色温"),
-        CMPhotoAdjustItem(id: 11, title: "色调"),
-        CMPhotoAdjustItem(id: 12, title: "锐度"),
-        CMPhotoAdjustItem(id: 13, title: "清晰度"),
-        CMPhotoAdjustItem(id: 14, title: "噪点消除"),
-        CMPhotoAdjustItem(id: 15, title: "晕影")
-    ]
+    let items: [CMPhotoAdjustItem]
     let itemDidChanged: (_ value: CMPhotoAdjustItem) -> Void
     
     @State private var selectedItem: CMPhotoAdjustItem = CMPhotoAdjustItem(id: 1,  title: "曝光")
@@ -81,7 +65,23 @@ struct CMPhotoEditorAdjustPicker: View {
 
 
 #Preview {
-    CMPhotoEditorAdjustPicker { value in
+    CMPhotoEditorAdjustPicker(items: [
+        CMPhotoAdjustItem(id: 1,  title: "曝光"),
+        CMPhotoAdjustItem(id: 2,  title: "鲜明度"),
+        CMPhotoAdjustItem(id: 3,  title: "高光"),
+        CMPhotoAdjustItem(id: 4,  title: "阴影"),
+        CMPhotoAdjustItem(id: 5,  title: "对比度"),
+        CMPhotoAdjustItem(id: 6,  title: "亮度"),
+        CMPhotoAdjustItem(id: 7,  title: "黑点"),
+        CMPhotoAdjustItem(id: 8,  title: "饱和度"),
+        CMPhotoAdjustItem(id: 9,  title: "自然饱和度"),
+        CMPhotoAdjustItem(id: 10, title: "色温"),
+        CMPhotoAdjustItem(id: 11, title: "色调"),
+        CMPhotoAdjustItem(id: 12, title: "锐度"),
+        CMPhotoAdjustItem(id: 13, title: "清晰度"),
+        CMPhotoAdjustItem(id: 14, title: "噪点消除"),
+        CMPhotoAdjustItem(id: 15, title: "晕影")
+    ]) { value in
         
     }
 }
