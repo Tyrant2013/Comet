@@ -13,15 +13,13 @@ struct CMPhotoAdjusterView: View {
             
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 120)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(lineWidth: 2)
-                .foregroundStyle(.white.opacity(0.4))
-        )
-        .background(.ultraThinMaterial, in: .rect(cornerRadius: 14))
-//        .background(LinearGradient(colors: [.white.opacity(0.1), .white.opacity(0.6)], startPoint: .top, endPoint: .bottom))
-        .clipShape(.rect(cornerRadius: 14, style: .continuous))
+        .frame(height: 80)
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 16)
+//                .stroke(lineWidth: 2)
+//                .foregroundStyle(.white)
+//        )
+//        .clipShape(.rect(cornerRadius: 16, style: .continuous))
     }
 }
 

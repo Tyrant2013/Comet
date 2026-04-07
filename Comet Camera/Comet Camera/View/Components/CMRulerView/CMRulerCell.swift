@@ -63,7 +63,7 @@ final class CMRulerCell: UICollectionViewCell {
             let lineHeight: CGFloat = 35
             path.move(to: CGPoint(x: width/2, y: bottomY - lineHeight))
             path.addLine(to: CGPoint(x: width/2, y: bottomY))
-            lineLayer.strokeColor = UIColor.label.cgColor
+            lineLayer.strokeColor = UIColor.white.cgColor
             lineLayer.lineWidth = 2
             
         case .medium:

@@ -104,7 +104,7 @@ final class CMRulerView: UIView {
             centerIndicator.centerXAnchor.constraint(equalTo: centerXAnchor),
             centerIndicator.bottomAnchor.constraint(equalTo: collectionView.bottomAnchor, constant: -10),
             centerIndicator.widthAnchor.constraint(equalToConstant: 4),
-            centerIndicator.heightAnchor.constraint(equalToConstant: 45),
+            centerIndicator.heightAnchor.constraint(equalToConstant: 35),
             
             valueLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             valueLabel.bottomAnchor.constraint(equalTo: collectionView.topAnchor, constant: -10)

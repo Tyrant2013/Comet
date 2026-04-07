@@ -674,6 +674,10 @@ struct ImageSpotlightView: View {
 class CMPhotoEditViewController: UIViewController {
     let imageView: CMPhotoEditorMTKView = CMPhotoEditorMTKView()
     let originalImage: UIImage
+    
+    let rulerManager = CMRulerManager()
+    private var currentRuler: CMRulerView?
+    
     init(image: UIImage) {
         originalImage = image
         
@@ -733,31 +737,20 @@ class CMPhotoEditViewController: UIViewController {
         
         imageContainer.addSubview(imageView)
         
-        let adjuster = UIHostingController(rootView: CMPhotoAdjusterView()).view!
+        let adjuster = UIView()
         view.addSubview(adjuster)
         adjuster.translatesAutoresizingMaskIntoConstraints = false
         adjuster.backgroundColor = .clear
         
-        let ruler = CMRulerView()
-        ruler.configuration = .init(valueChanged: { newValue in
-            
-        })
-        ruler.translatesAutoresizingMaskIntoConstraints = false
-        adjuster.addSubview(ruler)
-        NSLayoutConstraint.activate([
-            ruler.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor, constant: 1),
-            ruler.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor, constant: -1),
-            ruler.topAnchor.constraint(equalTo: adjuster.topAnchor, constant: 1),
-            ruler.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor, constant: -5)
-        ])
-        
-        let lensPicker = UIHostingController(rootView: CMPhotoEditorAdjustPicker(itemDidChanged: { value in
-            
-        })).view!
+        let lensPicker = UIHostingController(
+            rootView: CMPhotoEditorAdjustPicker(
+                items: rulerManager.items,
+                itemDidChanged: updateRulerWhenAdjustChanged
+            )
+        ).view!
         lensPicker.backgroundColor = .clear
         view.addSubview(lensPicker)
         lensPicker.translatesAutoresizingMaskIntoConstraints = false
-        
         
         let featurePicker = UIHostingController(rootView: CMPhotoEditorFeaturePicker()).view!
         view.addSubview(featurePicker)
@@ -775,6 +768,7 @@ class CMPhotoEditViewController: UIViewController {
             imageArea.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             imageArea.bottomAnchor.constraint(equalTo: lensPicker.topAnchor, constant: -10),
             
+            adjuster.heightAnchor.constraint(equalToConstant: 80),
             adjuster.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 30),
             adjuster.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -30),
             adjuster.bottomAnchor.constraint(equalTo: lensPicker.topAnchor, constant: -10),
@@ -786,6 +780,35 @@ class CMPhotoEditViewController: UIViewController {
             
             featurePicker.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             featurePicker.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ])
+        
+        guard let adjust = rulerManager.items.first,
+              let ruler = rulerManager.getRulter(adjust)
+        else { return }
+        adjuster.addSubview(ruler)
+        NSLayoutConstraint.activate([
+            ruler.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor),
+            ruler.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor),
+            ruler.topAnchor.constraint(equalTo: adjuster.topAnchor),
+            ruler.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
+        ])
+    }
+    
+    private func updateRulerWhenAdjustChanged(_ newAdjust: CMPhotoAdjustItem) {
+        guard
+            let ruler = currentRuler,
+            let adjustContainer = ruler.superview,
+            let newRuler = rulerManager.getRulter(newAdjust)
+        else { return }
+        
+        ruler.removeFromSuperview()
+        adjustContainer.addSubview(newRuler)
+        
+        NSLayoutConstraint.activate([
+            newRuler.leadingAnchor.constraint(equalTo: adjustContainer.leadingAnchor),
+            newRuler.trailingAnchor.constraint(equalTo: adjustContainer.trailingAnchor),
+            newRuler.topAnchor.constraint(equalTo: adjustContainer.topAnchor),
+            newRuler.bottomAnchor.constraint(equalTo: adjustContainer.bottomAnchor),
         ])
     }
 }
