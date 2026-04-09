@@ -130,6 +130,15 @@ class CMPhotoEditViewController: UIViewController {
             currentRuler.topAnchor.constraint(equalTo: adjuster.topAnchor),
             currentRuler.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
         ])
+        updateValueChangedObserver()
+    }
+    
+    private func updateValueChangedObserver() {
+        currentRuler.configuration.valueChanged = componentValueChanged(_:)
+    }
+    
+    private func componentValueChanged(_ value: Int) {
+        print("value:", value)
     }
     
     private func updateRulerWhenAdjustChanged(_ newAdjust: CMPhotoAdjustItem) {
@@ -152,8 +161,10 @@ class CMPhotoEditViewController: UIViewController {
             self.currentRuler.transform = transform
             newRuler.transform = .identity
         } completion: { _ in
+            self.currentRuler.configuration.valueChanged = { _ in }
             self.currentRuler.removeFromSuperview()
             self.currentRuler = newRuler
+            self.updateValueChangedObserver()
         }
     }
 }

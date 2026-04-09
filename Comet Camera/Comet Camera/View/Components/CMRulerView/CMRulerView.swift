@@ -41,6 +41,8 @@ final class CMRulerView: UIView {
         return min(max(value, configuration.minValue), configuration.maxValue)
     }
     
+    private var lastValue: Int = .max
+    
     private let layout = CMRulerLayout()
     private lazy var collectionView: UICollectionView = {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -157,6 +159,8 @@ final class CMRulerView: UIView {
     
     private func updateValueLabel(_ value: Int) {
         valueLabel.text = "\(value)"
+        guard lastValue != value else { return }
+        lastValue = value
         configuration.valueChanged?(value)
     }
     
@@ -203,6 +207,7 @@ extension CMRulerView: UICollectionViewDelegate {
         if configuration.fadeEffectEnabled {
             collectionView.collectionViewLayout.invalidateLayout()
         }
+        
         updateValueLabel(currentValue)
     }
     
