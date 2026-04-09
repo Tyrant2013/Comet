@@ -2,8 +2,6 @@
 //  CMPhotoAdjusterView.swift
 //  Comet Camera
 //
-//  Created by 桃园谷 on 2026/4/1.
-//
 
 import SwiftUI
 

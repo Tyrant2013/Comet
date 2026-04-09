@@ -1,8 +1,6 @@
 //
-//  File.swift
+//  CMAssetPickerViewState.swift
 //  Comet
-//
-//  Created by 桃园谷 on 2026/3/20.
 //
 
 import Foundation

@@ -1,8 +1,6 @@
 //
-//  File.swift
+//  CMDatasource.swift
 //  Comet
-//
-//  Created by 桃园谷 on 2026/3/24.
 //
 
 import Foundation

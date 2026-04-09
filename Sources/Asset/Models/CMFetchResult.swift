@@ -1,8 +1,6 @@
 //
-//  File.swift
+//  CMFetchResult.swift
 //  Comet
-//
-//  Created by 桃园谷 on 2026/3/19.
 //
 
 import Foundation

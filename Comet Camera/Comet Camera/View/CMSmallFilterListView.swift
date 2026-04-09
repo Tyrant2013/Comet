@@ -2,8 +2,6 @@
 //  CMSmallFilterListView.swift
 //  Comet Camera
 //
-//  Created by 桃园谷 on 2026/3/25.
-//
 
 import SwiftUI
 import UIKit

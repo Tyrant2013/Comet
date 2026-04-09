@@ -1,8 +1,6 @@
 //
-//  File.swift
+//  CVPixelBuffer.swift
 //  Comet
-//
-//  Created by 桃园谷 on 2026/2/5.
 //
 
 import Foundation

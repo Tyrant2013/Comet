@@ -2,8 +2,6 @@
 //  AppDelegate.swift
 //  Comet Camera
 //
-//  Created by 桃园谷 on 2026/3/26.
-//
 
 import UIKit
 
