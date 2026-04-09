@@ -673,14 +673,17 @@ struct ImageSpotlightView: View {
 
 class CMPhotoEditViewController: UIViewController {
     let imageView: CMPhotoEditorMTKView = CMPhotoEditorMTKView()
-    let originalImage: UIImage
     
     let rulerManager = CMRulerManager()
-    private var currentRuler: CMRulerView?
+    private var currentRuler: CMRulerView
+    
+    private var editContext: CMPhotoEditContext
+    private let editEngine = CMPhotoEditorEngine()
+    private var editOperations: [any CMPhotoEditOperation] = []
     
     init(image: UIImage) {
-        originalImage = image
-        
+        editContext = CMPhotoEditContext(image: CIImage(image: image)!)
+        currentRuler = rulerManager.getRulter(.defaultAdjustItem())
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -696,20 +699,21 @@ class CMPhotoEditViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        guard let ciInput = CIImage(image: originalImage) else { return }
-        
+        apply()
+    }
+    
+    private func apply() {
         do {
-            let output = try PhotoEditor.CMPhotoEditor.edit(ciInput, operations: [])
-            imageView.image = output
+            imageView.image = try editEngine.run(operations: editOperations, context: &editContext)
         }
         catch {
-             print("编辑失败: \(error.localizedDescription)")
+            
         }
     }
     
     private func setupUI() {
         view.backgroundColor = .black
-        let size = originalImage.size
+        let size = editContext.image.extent.size
         let radio = size.width / size.height
         let imgContainerWidth = view.bounds.width - 60
         let imgContainerHeight = imgContainerWidth / radio
@@ -741,6 +745,7 @@ class CMPhotoEditViewController: UIViewController {
         view.addSubview(adjuster)
         adjuster.translatesAutoresizingMaskIntoConstraints = false
         adjuster.backgroundColor = .clear
+        adjuster.clipsToBounds = true
         
         let lensPicker = UIHostingController(
             rootView: CMPhotoEditorAdjustPicker(
@@ -768,7 +773,7 @@ class CMPhotoEditViewController: UIViewController {
             imageArea.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             imageArea.bottomAnchor.constraint(equalTo: lensPicker.topAnchor, constant: -10),
             
-            adjuster.heightAnchor.constraint(equalToConstant: 80),
+            adjuster.heightAnchor.constraint(equalToConstant: 110),
             adjuster.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 30),
             adjuster.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -30),
             adjuster.bottomAnchor.constraint(equalTo: lensPicker.topAnchor, constant: -10),
@@ -782,26 +787,20 @@ class CMPhotoEditViewController: UIViewController {
             featurePicker.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
         
-        guard let adjust = rulerManager.items.first,
-              let ruler = rulerManager.getRulter(adjust)
-        else { return }
-        adjuster.addSubview(ruler)
+        adjuster.addSubview(currentRuler)
         NSLayoutConstraint.activate([
-            ruler.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor),
-            ruler.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor),
-            ruler.topAnchor.constraint(equalTo: adjuster.topAnchor),
-            ruler.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
+            currentRuler.leadingAnchor.constraint(equalTo: adjuster.leadingAnchor),
+            currentRuler.trailingAnchor.constraint(equalTo: adjuster.trailingAnchor),
+            currentRuler.topAnchor.constraint(equalTo: adjuster.topAnchor),
+            currentRuler.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
         ])
     }
     
     private func updateRulerWhenAdjustChanged(_ newAdjust: CMPhotoAdjustItem) {
-        guard
-            let ruler = currentRuler,
-            let adjustContainer = ruler.superview,
-            let newRuler = rulerManager.getRulter(newAdjust)
+        guard let adjustContainer = currentRuler.superview
         else { return }
         
-        ruler.removeFromSuperview()
+        let newRuler = rulerManager.getRulter(newAdjust)
         adjustContainer.addSubview(newRuler)
         
         NSLayoutConstraint.activate([
@@ -810,6 +809,16 @@ class CMPhotoEditViewController: UIViewController {
             newRuler.topAnchor.constraint(equalTo: adjustContainer.topAnchor),
             newRuler.bottomAnchor.constraint(equalTo: adjustContainer.bottomAnchor),
         ])
+        let transform = CGAffineTransformMakeTranslation(0, 120)
+        newRuler.transform = transform
+        
+        UIView.animate(withDuration: 0.2, delay: 0) {
+            self.currentRuler.transform = transform
+            newRuler.transform = .identity
+        } completion: { _ in
+            self.currentRuler.removeFromSuperview()
+            self.currentRuler = newRuler
+        }
     }
 }
 
@@ -829,12 +838,12 @@ struct CMPhotoEditViewPreview: UIViewControllerRepresentable {
 #Preview {
 //    CMPhotoEditorView()
 //    ImageSpotlightView()
-//    CMPhotoEditViewPreview()
-//        .ignoresSafeArea()
-    GeometryReader { geometry in
-        Image("abc")
-            .frame(width: geometry.size.width, height: geometry.size.height)
-    }
+    CMPhotoEditViewPreview()
+        .ignoresSafeArea()
+//    GeometryReader { geometry in
+//        Image("abc")
+//            .frame(width: geometry.size.width, height: geometry.size.height)
+//    }
 }
 
 
