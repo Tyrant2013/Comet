@@ -111,6 +111,9 @@ final class CMRulerView: UIView {
             valueLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             valueLabel.bottomAnchor.constraint(equalTo: collectionView.topAnchor, constant: -10)
         ])
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.setValue(0, animated: false)
+        }
     }
     
     override func layoutSubviews() {

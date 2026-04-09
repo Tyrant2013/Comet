@@ -13,13 +13,22 @@ class CMPhotoEditViewController: UIViewController {
     let rulerManager = CMRulerManager()
     private var currentRuler: CMRulerView
     
+    private var currentAdjust: CMPhotoAdjustItem
+    
     private var editContext: CMPhotoEditContext
     private let editEngine = CMPhotoEditorEngine()
-    private var editOperations: [any CMPhotoEditOperation] = []
+    
+    private var brightnessValue: Double = 0
+    private var contrastValue: Double = 1
+    private var saturationValue: Double = 1
+    private var exposureEVValue: Double = 0
+    
     
     init(image: UIImage) {
         editContext = CMPhotoEditContext(image: CIImage(image: image)!)
-        currentRuler = rulerManager.getRulter(.defaultAdjustItem())
+        currentAdjust = .defaultAdjustItem()
+        currentRuler = rulerManager.getRulter(currentAdjust)
+        
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -40,7 +49,19 @@ class CMPhotoEditViewController: UIViewController {
     
     private func apply() {
         do {
-            imageView.image = try editEngine.run(operations: editOperations, context: &editContext)
+            var operations: [any CMPhotoEditOperation] = []
+            
+            let colorAdjustOp = CMColorAdjustOperation(
+                configuration: .init(
+                    brightness: brightnessValue,
+                    contrast: contrastValue,
+                    saturation: saturationValue,
+                    exposureEV: exposureEVValue
+                )
+            )
+            operations.append(colorAdjustOp)
+            
+            imageView.image = try editEngine.run(operations: operations, context: &editContext)
         }
         catch {
             
@@ -136,9 +157,16 @@ class CMPhotoEditViewController: UIViewController {
     private func updateValueChangedObserver() {
         currentRuler.configuration.valueChanged = componentValueChanged(_:)
     }
-    
+    // 调整图片时，各种参数值更新
     private func componentValueChanged(_ value: Int) {
-        print("value:", value)
+        switch currentAdjust.id {
+        case .brightness:
+            brightnessValue = Double(value) / 100
+            print("brightne:", brightnessValue)
+        default:
+            break
+        }
+        apply()
     }
     
     private func updateRulerWhenAdjustChanged(_ newAdjust: CMPhotoAdjustItem) {
