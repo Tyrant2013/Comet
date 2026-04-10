@@ -49,6 +49,9 @@ class CMPhotoEditViewController: UIViewController {
     
     private func apply() {
         do {
+            // 每次应用操作前重置图像到原始状态
+            editContext.resetImage()
+            
             var operations: [any CMPhotoEditOperation] = []
             
             let colorAdjustOp = CMColorAdjustOperation(
