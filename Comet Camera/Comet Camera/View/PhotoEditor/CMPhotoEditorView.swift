@@ -48,26 +48,31 @@ class CMPhotoEditViewController: UIViewController {
     }
     
     private func apply() {
-        do {
-            // 每次应用操作前重置图像到原始状态
-            editContext.resetImage()
-            
-            var operations: [any CMPhotoEditOperation] = []
-            
-            let colorAdjustOp = CMColorAdjustOperation(
-                configuration: .init(
-                    brightness: brightnessValue,
-                    contrast: contrastValue,
-                    saturation: saturationValue,
-                    exposureEV: exposureEVValue
-                )
+        var operations: [any CMPhotoEditOperation] = []
+        
+        let colorAdjustOp = CMColorAdjustOperation(
+            configuration: .init(
+                brightness: brightnessValue,
+                contrast: contrastValue,
+                saturation: saturationValue,
+                exposureEV: exposureEVValue
             )
-            operations.append(colorAdjustOp)
+        )
+        operations.append(colorAdjustOp)
+        
+        // 使用异步处理方法，避免阻塞UI
+        editEngine.runAsync(operations: operations, context: editContext) { [weak self] result in
+            guard let self = self else { return }
             
-            imageView.image = try editEngine.run(operations: operations, context: &editContext)
-        }
-        catch {
-            
+            switch result {
+            case .success(let image):
+                DispatchQueue.main.async {
+                    self.imageView.image = image
+                }
+            case .failure(_):
+                // 错误处理
+                break
+            }
         }
     }
     
