@@ -6,8 +6,9 @@
 import SwiftUI
 import Camera
 import PhotoEditor
+import UIKit
 
-class CMPhotoEditViewController: UIViewController {
+class CMPhotoEditViewController: UIViewController, CMCropViewControllerDelegate {
     let imageView: CMPhotoEditorMTKView = CMPhotoEditorMTKView()
     
     let rulerManager = CMRulerManager()
@@ -23,8 +24,26 @@ class CMPhotoEditViewController: UIViewController {
     private var saturationValue: Double = 1
     private var exposureEVValue: Double = 0
     
+    private let cropButton = UIButton(type: .system)
+    private let filterButton = UIButton(type: .system)
+    private let adjustButton = UIButton(type: .system)
+    private let saveButton = UIButton(type: .system)
+    
+    private let filterListView = CMSmallFilterListView()
+    private let adjusterView = CMPhotoAdjusterView()
+    
+    private var currentMode: EditMode = .none
+    private var originalImage: UIImage
+    
+    enum EditMode {
+        case none
+        case crop
+        case filter
+        case adjust
+    }
     
     init(image: UIImage) {
+        self.originalImage = image
         editContext = CMPhotoEditContext(image: CIImage(image: image)!)
         currentAdjust = .defaultAdjustItem()
         currentRuler = rulerManager.getRulter(currentAdjust)
@@ -39,6 +58,8 @@ class CMPhotoEditViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        setupButtons()
+        setupSubviews()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -71,7 +92,130 @@ class CMPhotoEditViewController: UIViewController {
         }
     }
     
-    private let saveButton = UIButton(type: .system)
+    private func setupButtons() {
+        // 设置底部工具栏按钮
+        let buttonStackView = UIStackView(arrangedSubviews: [cropButton, filterButton, adjustButton, saveButton])
+        buttonStackView.axis = .horizontal
+        buttonStackView.distribution = .equalSpacing
+        buttonStackView.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(buttonStackView)
+        NSLayoutConstraint.activate([
+            buttonStackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            buttonStackView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            buttonStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            buttonStackView.heightAnchor.constraint(equalToConstant: 44)
+        ])
+        
+        // 配置按钮
+        cropButton.setTitle("裁剪", for: .normal)
+        cropButton.setTitleColor(.white, for: .normal)
+        cropButton.addTarget(self, action: #selector(cropButtonTapped), for: .touchUpInside)
+        
+        filterButton.setTitle("滤镜", for: .normal)
+        filterButton.setTitleColor(.white, for: .normal)
+        filterButton.addTarget(self, action: #selector(filterButtonTapped), for: .touchUpInside)
+        
+        adjustButton.setTitle("调整", for: .normal)
+        adjustButton.setTitleColor(.white, for: .normal)
+        adjustButton.addTarget(self, action: #selector(adjustButtonTapped), for: .touchUpInside)
+        
+        saveButton.setTitle("保存", for: .normal)
+        saveButton.setTitleColor(.white, for: .normal)
+        saveButton.backgroundColor = .systemBlue
+        saveButton.layer.cornerRadius = 8
+        saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
+    }
+    
+    private func setupSubviews() {
+        // 设置滤镜列表
+        filterListView.translatesAutoresizingMaskIntoConstraints = false
+        filterListView.isHidden = true
+        view.addSubview(filterListView)
+        NSLayoutConstraint.activate([
+            filterListView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            filterListView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            filterListView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            filterListView.heightAnchor.constraint(equalToConstant: 150)
+        ])
+        
+        // 设置调整视图
+        adjusterView.translatesAutoresizingMaskIntoConstraints = false
+        adjusterView.isHidden = true
+        view.addSubview(adjusterView)
+        NSLayoutConstraint.activate([
+            adjusterView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            adjusterView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            adjusterView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            adjusterView.heightAnchor.constraint(equalToConstant: 300)
+        ])
+        
+        // 设置回调
+        filterListView.filterSelected = { [weak self] filter in
+            guard let self = self else { return }
+            let operation = CMFilterOperation(filter: filter)
+            do {
+                try operation.apply(to: &self.editContext)
+                self.imageView.image = self.editContext.image
+            } catch {
+                print("Error applying filter: \(error)")
+            }
+        }
+        
+        adjusterView.adjustmentChanged = { [weak self] adjustments in
+            guard let self = self else { return }
+            self.brightnessValue = Double(adjustments.brightness)
+            self.contrastValue = Double(adjustments.contrast)
+            self.saturationValue = Double(adjustments.saturation)
+            self.apply()
+        }
+    }
+    
+    @objc private func cropButtonTapped() {
+        // 打开裁剪视图控制器
+        let cropViewController = CMCropViewController(image: UIImage(ciImage: editContext.image))
+        cropViewController.delegate = self
+        // 显示裁剪视图控制器
+        present(cropViewController, animated: true)
+    }
+    
+    @objc private func filterButtonTapped() {
+        toggleMode(.filter)
+    }
+    
+    @objc private func adjustButtonTapped() {
+        toggleMode(.adjust)
+    }
+    
+    private func toggleMode(_ mode: EditMode) {
+        // 隐藏所有子视图
+        filterListView.isHidden = true
+        adjusterView.isHidden = true
+        
+        // 显示选中的模式
+        switch mode {
+        case .filter:
+            filterListView.isHidden = false
+            filterListView.updateFilterPreviews(for: UIImage(ciImage: editContext.image))
+        case .adjust:
+            adjusterView.isHidden = false
+        default:
+            break
+        }
+        
+        currentMode = mode
+    }
+    
+    // 实现裁剪视图控制器代理
+    func cropViewController(_ controller: CMCropViewController, didCropTo image: UIImage, with rect: CGRect, angle: CGFloat) {
+        editContext = CMPhotoEditContext(image: CIImage(image: image)!)
+        imageView.image = editContext.image
+        controller.dismiss(animated: true)
+    }
+    
+    func cropViewControllerDidCancel(_ controller: CMCropViewController) {
+        controller.dismiss(animated: true)
+    }
     
     private func setupUI() {
         view.backgroundColor = .black
@@ -161,23 +305,7 @@ class CMPhotoEditViewController: UIViewController {
         updateValueChangedObserver()
     }
     
-    private func setupSaveButton() {
-        saveButton.setTitle("保存", for: .normal)
-        saveButton.setTitleColor(.white, for: .normal)
-        saveButton.backgroundColor = .systemBlue
-        saveButton.layer.cornerRadius = 8
-        saveButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(saveButton)
-        NSLayoutConstraint.activate([
-            saveButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            saveButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-            saveButton.widthAnchor.constraint(equalToConstant: 80),
-            saveButton.heightAnchor.constraint(equalToConstant: 44)
-        ])
-        
-        saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
-    }
+
     
     @objc private func saveButtonTapped() {
         guard let currentImage = imageView.image else { return }
