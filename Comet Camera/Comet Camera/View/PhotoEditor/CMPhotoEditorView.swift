@@ -71,6 +71,8 @@ class CMPhotoEditViewController: UIViewController {
         }
     }
     
+    private let saveButton = UIButton(type: .system)
+    
     private func setupUI() {
         view.backgroundColor = .black
         let size = editContext.image.extent.size
@@ -122,6 +124,8 @@ class CMPhotoEditViewController: UIViewController {
         featurePicker.backgroundColor = .clear
         featurePicker.translatesAutoresizingMaskIntoConstraints = false
         
+        setupSaveButton()
+        
         NSLayoutConstraint.activate([
             imageContainer.centerXAnchor.constraint(equalTo: imageArea.centerXAnchor),
             imageContainer.centerYAnchor.constraint(equalTo: imageArea.centerYAnchor),
@@ -155,6 +159,70 @@ class CMPhotoEditViewController: UIViewController {
             currentRuler.bottomAnchor.constraint(equalTo: adjuster.bottomAnchor),
         ])
         updateValueChangedObserver()
+    }
+    
+    private func setupSaveButton() {
+        saveButton.setTitle("保存", for: .normal)
+        saveButton.setTitleColor(.white, for: .normal)
+        saveButton.backgroundColor = .systemBlue
+        saveButton.layer.cornerRadius = 8
+        saveButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(saveButton)
+        NSLayoutConstraint.activate([
+            saveButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            saveButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            saveButton.widthAnchor.constraint(equalToConstant: 80),
+            saveButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+        
+        saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
+    }
+    
+    @objc private func saveButtonTapped() {
+        guard let currentImage = imageView.image else { return }
+        
+        let alertController = UIAlertController(title: "保存图片", message: "选择保存位置", preferredStyle: .actionSheet)
+        
+        let saveToLibraryAction = UIAlertAction(title: "保存到相册", style: .default) { _ in
+            CMPhotoEditorSave.saveToPhotoLibrary(image: UIImage(ciImage: currentImage)) { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        let successAlert = UIAlertController(title: "成功", message: "图片已保存到相册", preferredStyle: .alert)
+                        successAlert.addAction(UIAlertAction(title: "确定", style: .default))
+                        self.present(successAlert, animated: true)
+                    } else {
+                        let errorAlert = UIAlertController(title: "错误", message: "保存失败: \(error?.localizedDescription ?? "未知错误")", preferredStyle: .alert)
+                        errorAlert.addAction(UIAlertAction(title: "确定", style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+            }
+        }
+        
+        let saveToFileAction = UIAlertAction(title: "保存到文件", style: .default) { _ in
+            CMPhotoEditorSave.save(image: UIImage(ciImage: currentImage), format: .jpeg) { url, error in
+                DispatchQueue.main.async {
+                    if let url = url {
+                        let successAlert = UIAlertController(title: "成功", message: "图片已保存到文件: \(url.lastPathComponent)", preferredStyle: .alert)
+                        successAlert.addAction(UIAlertAction(title: "确定", style: .default))
+                        self.present(successAlert, animated: true)
+                    } else {
+                        let errorAlert = UIAlertController(title: "错误", message: "保存失败: \(error?.localizedDescription ?? "未知错误")", preferredStyle: .alert)
+                        errorAlert.addAction(UIAlertAction(title: "确定", style: .default))
+                        self.present(errorAlert, animated: true)
+                    }
+                }
+            }
+        }
+        
+        let cancelAction = UIAlertAction(title: "取消", style: .cancel)
+        
+        alertController.addAction(saveToLibraryAction)
+        alertController.addAction(saveToFileAction)
+        alertController.addAction(cancelAction)
+        
+        present(alertController, animated: true)
     }
     
     private func updateValueChangedObserver() {
