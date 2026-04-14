@@ -5,33 +5,37 @@
 
 import SwiftUI
 import UIKit
+import PhotoEditor
 
 struct CMSmallFilterListView: View {
     let image: UIImage
+    let filters: [CMPhotoEditorFilter] = CMPhotoEditorFilter.allFilters()
+    var filterSelected: ((CMPhotoEditorFilter) -> Void)?
+    @State private var filterPreviews: [UIImage] = []
+    
     var body: some View {
         GeometryReader { geometry in
             
-            CMScrollView(itemSize: image.size, spacing: 4) {
-                HStack(spacing: 4) {
-                    ForEach(0..<10) { index in
-                        Image(uiImage: image)
-                            .frame(width: image.size.width, height: image.size.height)
-                            .clipShape(.rect(cornerRadius: 5))
-                            .id(index)
-                            .overlay(
-                                Rectangle()
-                                    .frame(width: 1)
-                                    .foregroundStyle(Color.yellow)
-                            )
-                        
+            CMScrollView(itemSize: CGSize(width: 60, height: 60), spacing: 8) {
+                HStack(spacing: 8) {
+                    ForEach(0..<filters.count, id: \.self) { index in
+                        Button(action: {
+                            filterSelected?(filters[index])
+                        }) {
+                            Image(uiImage: filterPreviews.count > index ? filterPreviews[index] : image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 60, height: 60)
+                                .clipShape(.rect(cornerRadius: 8))
+                                .id(index)
+                        }
                     }
                 }
-                .padding(.horizontal, geometry.size.width / 2 - image.size.width / 2)
+                .padding(.horizontal, geometry.size.width / 2 - 30)
             }
-            .frame(height: 40)
+            .frame(height: 80)
         }
-        .frame(height: 40)
-        .frame(height: 60)
+        .frame(height: 80)
         .overlay(
             VStack {
                 Image(systemName: "triangle.fill")
@@ -42,7 +46,13 @@ struct CMSmallFilterListView: View {
                 .font(.system(size: 10))
         )
         .onAppear {
-            print("C:", image.size)
+            updateFilterPreviews(for: image)
+        }
+    }
+    
+    func updateFilterPreviews(for image: UIImage) {
+        filterPreviews = filters.map { filter in
+            return filter.preview(on: image) ?? image
         }
     }
 }
