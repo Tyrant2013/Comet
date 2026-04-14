@@ -1,4 +1,5 @@
 import UIKit
+import Photos
 private let kCMCropViewControllerTitleTopPadding: CGFloat = 14.0
 private let kCMCropViewControllerToolbarHeight: CGFloat = 44.0
 
@@ -722,6 +723,36 @@ open class CMCropViewController: UIViewController, CMCropViewDelegate, UIViewCon
 
     public func cropViewDidBecomeNonResettable(_ cropView: CMCropView) {
         internalToolbar.resetButtonEnabled = false
+    }
+    
+    public func saveCroppedImage() {
+        let cropRect = internalCropView.imageCropFrame
+        let angle = internalCropView.angle
+        let circular = croppingStyle == .circular
+        
+        let croppedImage: UIImage
+        if circular {
+            croppedImage = image.cm_croppedImage(frame: cropRect, angle: angle, circularClip: true)
+        } else {
+            croppedImage = (angle == 0 && cropRect.equalTo(CGRect(origin: .zero, size: image.size)))
+                ? image
+                : image.cm_croppedImage(frame: cropRect, angle: angle, circularClip: false)
+        }
+        
+        PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.creationRequestForAsset(from: croppedImage)
+        } completionHandler: { success, error in
+            DispatchQueue.main.async {
+                if success {
+                    self.dismiss(animated: true)
+                } else {
+                    // 显示错误信息
+                    let alert = UIAlertController(title: "保存失败", message: error?.localizedDescription ?? "未知错误", preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "确定", style: .default))
+                    self.present(alert, animated: true)
+                }
+            }
+        }
     }
 
     public override func viewSafeAreaInsetsDidChange() {
