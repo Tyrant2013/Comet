@@ -7,7 +7,7 @@ public enum CMMosaicOperationError: Error {
 }
 
 public struct CMMosaicOperation: CMPhotoEditOperation {
-    public struct Configuration: Sendable {
+    public struct Configuration: Sendable, Hashable {
         public var manualRegions: [CGRect]
         public var autoDetectSensitiveData: Bool
         public var mosaicScale: Double
@@ -75,5 +75,14 @@ public struct CMMosaicOperation: CMPhotoEditOperation {
             composite?.setValue(partial, forKey: kCIInputBackgroundImageKey)
             return (composite?.outputImage ?? partial).cropped(to: extent)
         }
+    }
+    
+    public static func == (lhs: CMMosaicOperation, rhs: CMMosaicOperation) -> Bool {
+        return lhs.id == rhs.id && lhs.configuration == rhs.configuration
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(configuration)
     }
 }

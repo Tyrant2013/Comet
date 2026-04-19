@@ -28,6 +28,15 @@ public struct CMCropOperation: CMPhotoEditOperation {
         let rect = state.cropRect(in: workingImage.extent)
         context.image = workingImage.cropped(to: rect)
     }
+    
+    public static func == (lhs: CMCropOperation, rhs: CMCropOperation) -> Bool {
+        return lhs.id == rhs.id && lhs.state == rhs.state
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(state)
+    }
 }
 
 extension CMCropOperation {

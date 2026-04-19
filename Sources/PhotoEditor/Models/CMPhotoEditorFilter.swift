@@ -1,6 +1,6 @@
 import Foundation
 
-public enum CMPhotoEditorFilterType: String, CaseIterable {
+public enum CMPhotoEditorFilterType: String, CaseIterable, Hashable {
     case normal
     case blackAndWhite
     case sepia
@@ -15,7 +15,7 @@ public enum CMPhotoEditorFilterType: String, CaseIterable {
     case mono
 }
 
-public struct CMPhotoEditorFilter: Sendable {
+public struct CMPhotoEditorFilter: Sendable, Hashable {
     let type: CMPhotoEditorFilterType
     let intensity: CGFloat
     
@@ -84,7 +84,7 @@ public struct CMPhotoEditorFilter: Sendable {
 }
 
 extension CMPhotoEditorFilter {
-    static func allFilters() -> [CMPhotoEditorFilter] {
+    public static func allFilters() -> [CMPhotoEditorFilter] {
         return CMPhotoEditorFilterType.allCases.map { type in
             CMPhotoEditorFilter(type: type, intensity: 1.0)
         }

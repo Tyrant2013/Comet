@@ -41,6 +41,15 @@ public struct CMFilterOperation: CMPhotoEditOperation {
         
         return UIImage(cgImage: cgImage)
     }
+    
+    public static func == (lhs: CMFilterOperation, rhs: CMFilterOperation) -> Bool {
+        return lhs.id == rhs.id && lhs.filter == rhs.filter
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(filter)
+    }
 }
 
 extension CMPhotoEditorFilter {

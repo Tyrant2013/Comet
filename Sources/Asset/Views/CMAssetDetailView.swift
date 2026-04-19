@@ -187,7 +187,7 @@ struct EditToolbar: View {
     
     /// 添加滤镜
     private func addFilter() {
-        let filter = CMFilterOperation(filter: .chrome)
+        let filter = CMFilterOperation(filter: CMPhotoEditorFilter(type: .chrome))
         operations.append(filter)
     }
     

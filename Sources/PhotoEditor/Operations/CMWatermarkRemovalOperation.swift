@@ -3,7 +3,7 @@ import CoreImage
 import CoreGraphics
 
 public struct CMWatermarkRemovalOperation: CMPhotoEditOperation {
-    public struct Configuration: Sendable {
+    public struct Configuration: Sendable, Hashable {
         public var regions: [CGRect]
         public var blurRadius: Double
         public var featherRadius: Double
@@ -73,5 +73,14 @@ public struct CMWatermarkRemovalOperation: CMPhotoEditOperation {
         blur?.setValue(hardMask, forKey: kCIInputImageKey)
         blur?.setValue(featherRadius, forKey: kCIInputRadiusKey)
         return (blur?.outputImage ?? hardMask).cropped(to: extent)
+    }
+    
+    public static func == (lhs: CMWatermarkRemovalOperation, rhs: CMWatermarkRemovalOperation) -> Bool {
+        return lhs.id == rhs.id && lhs.configuration == rhs.configuration
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(configuration)
     }
 }

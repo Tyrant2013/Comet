@@ -4,7 +4,7 @@ import CoreGraphics
 import CoreText
 
 public struct CMTextOverlayOperation: CMPhotoEditOperation {
-    public struct Configuration: Sendable {
+    public struct Configuration: Sendable, Hashable {
         public var text: String
         public var normalizedOrigin: CGPoint
         public var fontSize: CGFloat
@@ -83,5 +83,14 @@ public struct CMTextOverlayOperation: CMPhotoEditOperation {
 
         guard let cgImage = cg.makeImage() else { return nil }
         return CIImage(cgImage: cgImage)
+    }
+    
+    public static func == (lhs: CMTextOverlayOperation, rhs: CMTextOverlayOperation) -> Bool {
+        return lhs.id == rhs.id && lhs.configuration == rhs.configuration
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(configuration)
     }
 }

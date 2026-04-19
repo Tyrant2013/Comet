@@ -2,7 +2,7 @@ import Foundation
 import CoreImage
 
 public struct CMColorAdjustOperation: CMPhotoEditOperation {
-    public struct Configuration: Sendable {
+    public struct Configuration: Sendable, Hashable {
         public var brightness: Double
         public var contrast: Double
         public var saturation: Double
@@ -65,5 +65,14 @@ public struct CMColorAdjustOperation: CMPhotoEditOperation {
         }
 
         context.image = colorAdjusted
+    }
+    
+    public static func == (lhs: CMColorAdjustOperation, rhs: CMColorAdjustOperation) -> Bool {
+        return lhs.id == rhs.id && lhs.configuration == rhs.configuration
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(configuration)
     }
 }
