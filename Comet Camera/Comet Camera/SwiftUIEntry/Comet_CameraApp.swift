@@ -9,14 +9,14 @@ import SwiftUI
 import CoreData
 import Asset
 
-//@main
 struct Comet_CameraApp: App {
     let persistenceController = PersistenceController.shared
 
     var body: some Scene {
         WindowGroup {
-            CMAssetPickerView()
-//            ContentView()
+            // This is kept for preview purposes only
+            // Actual launch is handled by UIKit (AppDelegate/SceneDelegate)
+            EmptyView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }

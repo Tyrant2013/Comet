@@ -10,7 +10,7 @@ public enum CMBackgroundRemovalOperationError: Error {
 }
 
 public struct CMBackgroundRemovalOperation: CMPhotoEditOperation {
-    public struct Configuration: Sendable {
+    public struct Configuration: Sendable, Hashable {
         public var edgeFeatherRadius: Double
 
         public init(edgeFeatherRadius: Double = 1.5) {
@@ -88,5 +88,14 @@ public struct CMBackgroundRemovalOperation: CMPhotoEditOperation {
         ))
 
         return translated.cropped(to: extent)
+    }
+    
+    public static func == (lhs: CMBackgroundRemovalOperation, rhs: CMBackgroundRemovalOperation) -> Bool {
+        return lhs.id == rhs.id && lhs.configuration == rhs.configuration
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(configuration)
     }
 }

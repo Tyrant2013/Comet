@@ -15,7 +15,7 @@ final class CMOverlayAndFilterTests: XCTestCase {
     func testFilterChangesImage() throws {
         let image = TestImageSupport.checkerboard()
         var context = CMPhotoEditContext(image: image)
-        try CMFilterOperation(filter: .chrome).apply(to: &context)
+        try CMFilterOperation(filter: CMPhotoEditorFilter(type: .chrome)).apply(to: &context)
 
         XCTAssertGreaterThan(TestImageSupport.meanAbsoluteDifference(image, context.image), 0.1)
     }

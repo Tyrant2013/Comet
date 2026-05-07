@@ -1009,11 +1009,11 @@ public enum EditorFilter: CaseIterable {
     
     var filter: CMPhotoEditorFilter {
         switch self {
-        case .none: return .none
-        case .noir: return .noir
-        case .chrome: return .chrome
-        case .mono: return .mono
-        case .instant: return .instant
+        case .none: return CMPhotoEditorFilter(type: .normal)
+        case .noir: return CMPhotoEditorFilter(type: .tonal)
+        case .chrome: return CMPhotoEditorFilter(type: .chrome)
+        case .mono: return CMPhotoEditorFilter(type: .mono)
+        case .instant: return CMPhotoEditorFilter(type: .instant)
         }
     }
 }

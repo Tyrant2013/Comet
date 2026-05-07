@@ -1,7 +1,7 @@
 import Foundation
 import CoreGraphics
 
-public struct CMCropState: Sendable {
+public struct CMCropState: Sendable, Hashable {
     public let imageSize: CGSize
     public private(set) var zoomScale: CGFloat
     public private(set) var panOffset: CGPoint

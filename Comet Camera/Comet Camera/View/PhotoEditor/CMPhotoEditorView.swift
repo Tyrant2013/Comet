@@ -48,31 +48,25 @@ class CMPhotoEditViewController: UIViewController {
     }
     
     private func apply() {
-        var operations: [any CMPhotoEditOperation] = []
-        
-        let colorAdjustOp = CMColorAdjustOperation(
-            configuration: .init(
-                brightness: brightnessValue,
-                contrast: contrastValue,
-                saturation: saturationValue,
-                exposureEV: exposureEVValue
-            )
-        )
-        operations.append(colorAdjustOp)
-        
-        // 使用异步处理方法，避免阻塞UI
-        editEngine.runAsync(operations: operations, context: editContext) { [weak self] result in
-            guard let self = self else { return }
+        do {
+            editContext.resetImage()
             
-            switch result {
-            case .success(let image):
-                DispatchQueue.main.async {
-                    self.imageView.image = image
-                }
-            case .failure(_):
-                // 错误处理
-                break
-            }
+            var operations: [any CMPhotoEditOperation] = []
+            
+            let colorAdjustOp = CMColorAdjustOperation(
+                configuration: .init(
+                    brightness: brightnessValue,
+                    contrast: contrastValue,
+                    saturation: saturationValue,
+                    exposureEV: exposureEVValue
+                )
+            )
+            operations.append(colorAdjustOp)
+            
+            imageView.image = try editEngine.run(operations: operations, context: &editContext)
+        }
+        catch {
+            
         }
     }
     
@@ -165,7 +159,6 @@ class CMPhotoEditViewController: UIViewController {
     private func updateValueChangedObserver() {
         currentRuler.configuration.valueChanged = componentValueChanged(_:)
     }
-    // 调整图片时，各种参数值更新
     private func componentValueChanged(_ value: Int) {
         switch currentAdjust.id {
         case .brightness:
@@ -228,8 +221,6 @@ struct CMPhotoEditViewPreview: UIViewControllerRepresentable {
 //            .frame(width: geometry.size.width, height: geometry.size.height)
 //    }
 }
-
-
 
 
 
